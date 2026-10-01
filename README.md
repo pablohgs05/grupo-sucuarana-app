@@ -84,6 +84,18 @@ Verificação completa:
 - [Status atual](STATUS.md)
 - [Changelog](CHANGELOG.md)
 
+## Proteções do repositório
+
+Pull requests para `main` e `dev` passam pelo GitHub Actions antes de serem
+aceitos. O CI executa análise e testes Flutter com cobertura e testes do
+backend. O CodeQL analisa o código Java, o secret scanning com push protection
+está ativo e o Dependabot propõe atualizações periódicas de dependências e
+Actions.
+
+Não faça push direto nessas branches: abra uma pull request e aguarde os checks
+obrigatórios. A cobertura gerada fica disponível como artefato da execução do
+CI (`flutter-coverage`).
+
 ## Status
 
 Fase de fundação executável: o shell Flutter, o endpoint de saúde e os testes mínimos estão prontos. Persistência, formulário, PDF, sincronização e autenticação continuam fora desta etapa. Consulte [STATUS.md](STATUS.md) e o [roadmap](docs/05-roadmap.md).

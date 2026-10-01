@@ -4,9 +4,11 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - 'app-mobile/**'
-      - '.github/workflows/flutter-ci.yml'
+      - dev
+  push:
+    branches:
+      - main
+      - dev
   workflow_dispatch:
 
 permissions:
@@ -42,4 +44,48 @@ jobs:
         run: flutter analyze
 
       - name: Run tests
-        run: flutter test
+        run: flutter test --coverage
+
+      - name: Enforce minimum line coverage
+        shell: bash
+        run: |
+          awk -F: '
+            /^LF:/ { total += $2 }
+            /^LH:/ { hit += $2 }
+            END {
+              if (total == 0 || hit / total < 0.50) {
+                printf "Line coverage %.1f%% is below the 50%% minimum\n", (hit / total) * 100
+                exit 1
+              }
+              printf "Line coverage: %.1f%%\n", (hit / total) * 100
+            }
+          ' coverage/lcov.info
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: flutter-coverage
+          path: app-mobile/coverage/lcov.info
+          if-no-files-found: error
+
+  backend:
+    name: Test backend
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Run tests
+        run: mvn --batch-mode test
