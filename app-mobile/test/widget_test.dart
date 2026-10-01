@@ -16,8 +16,15 @@ void main() {
 
   testWidgets('exibe a tela inicial do aplicativo', (tester) async {
     await tester.pumpWidget(const GrupoSucuaranaApp());
-    await tester.pumpAndSettle();
 
+    for (var attempt = 0; attempt < 50; attempt++) {
+      await tester.pump(const Duration(milliseconds: 50));
+      if (find.byType(CircularProgressIndicator).evaluate().isEmpty) {
+        break;
+      }
+    }
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('Grupo Suçuarana'), findsOneWidget);
     expect(find.text('Novo relatório'), findsOneWidget);
   });
