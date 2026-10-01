@@ -61,7 +61,7 @@ cd backend
 mvn spring-boot:run
 ```
 
-No Windows, use `mvnw.cmd` se o Maven Wrapper estiver disponível. O backend expõe `GET http://localhost:8080/api/health` sem autenticação e a documentação em `/swagger-ui.html`. O banco só será usado quando as migrations do domínio forem implementadas.
+No Windows, use `mvnw.cmd` se o Maven Wrapper estiver disponível. O backend expõe `GET http://localhost:8080/api/health` sem autenticação e `POST /api/reports/sync` para sincronizar relatórios de forma idempotente. Por padrão ele usa H2 em memória, então funciona sem Docker; para persistência MySQL, defina `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` e `DB_PLATFORM=org.hibernate.dialect.MySQLDialect`.
 
 Para preparar o ambiente, copie `.env.example` para `.env` e ajuste apenas localmente. Nunca versione credenciais.
 

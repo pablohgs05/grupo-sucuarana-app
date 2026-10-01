@@ -2,13 +2,14 @@ spring:
   application:
     name: relatorios-api
   datasource:
-    url: ${DB_URL:jdbc:mysql://localhost:3306/grupo_sucuarana}
-    username: ${DB_USERNAME:root}
+    url: ${DB_URL:jdbc:h2:mem:grupo_sucuarana;DB_CLOSE_DELAY=-1}
+    username: ${DB_USERNAME:sa}
     password: ${DB_PASSWORD:}
   jpa:
     open-in-view: false
     hibernate:
       ddl-auto: validate
+    database-platform: ${DB_PLATFORM:org.hibernate.dialect.H2Dialect}
   jackson:
     default-property-inclusion: non_null
 
@@ -20,4 +21,3 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
-
