@@ -6,7 +6,13 @@ import 'package:sqflite/sqflite.dart';
 
 import 'report_model.dart';
 
-class ReportStore {
+abstract interface class ReportRepository {
+  Future<List<Report>> load();
+
+  Future<void> save(List<Report> reports);
+}
+
+class ReportStore implements ReportRepository {
   ReportStore({
     DatabaseFactory? factory,
     String? databasePath,
@@ -28,6 +34,7 @@ class ReportStore {
   final String? _databasePath;
   Future<Database>? _databaseFuture;
 
+  @override
   Future<List<Report>> load() async {
     final db = await _open();
     final rows = await db.query(_table, orderBy: 'updated_at DESC');
@@ -43,6 +50,7 @@ class ReportStore {
         .toList();
   }
 
+  @override
   Future<void> save(List<Report> reports) async {
     final db = await _open();
     final incomingIds = reports.map((report) => report.id).toSet();

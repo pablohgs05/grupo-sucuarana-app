@@ -11,23 +11,29 @@ import 'report_store.dart';
 void main() => runApp(const GrupoSucuaranaApp());
 
 class GrupoSucuaranaApp extends StatelessWidget {
-  const GrupoSucuaranaApp({super.key});
+  const GrupoSucuaranaApp({super.key, this.reportRepository});
+
+  final ReportRepository? reportRepository;
+
   @override
   Widget build(BuildContext context) => MaterialApp(
         title: 'Grupo Suçuarana',
         theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.green), useMaterial3: true),
-        home: const HomePage(),
+        home: HomePage(reportRepository: reportRepository),
       );
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.reportRepository});
+
+  final ReportRepository? reportRepository;
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  final _store = ReportStore();
+  late final ReportRepository _store;
   final _syncService = ReportSync();
   List<Report> _reports = [];
   bool _loading = true;
@@ -35,6 +41,7 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
+    _store = widget.reportRepository ?? ReportStore();
     _reload();
   }
 

@@ -1,28 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grupo_sucuarana_app/main.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:grupo_sucuarana_app/report_model.dart';
+import 'package:grupo_sucuarana_app/report_store.dart';
 
 void main() {
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  });
-
-  setUp(() {
-    SharedPreferences.setMockInitialValues({});
-  });
-
   testWidgets('exibe a tela inicial do aplicativo', (tester) async {
-    await tester.pumpWidget(const GrupoSucuaranaApp());
-
-    for (var attempt = 0; attempt < 50; attempt++) {
-      await tester.pump(const Duration(milliseconds: 50));
-      if (find.byType(CircularProgressIndicator).evaluate().isEmpty) {
-        break;
-      }
-    }
+    await tester.pumpWidget(
+      GrupoSucuaranaApp(reportRepository: _FakeReportRepository()),
+    );
+    await tester.pump();
 
     expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('Grupo Suçuarana'), findsOneWidget);
@@ -37,4 +24,12 @@ void main() {
     expect(find.text('Título do relatório'), findsOneWidget);
     expect(find.text('Próximo'), findsWidgets);
   });
+}
+
+class _FakeReportRepository implements ReportRepository {
+  @override
+  Future<List<Report>> load() async => const [];
+
+  @override
+  Future<void> save(List<Report> reports) async {}
 }
