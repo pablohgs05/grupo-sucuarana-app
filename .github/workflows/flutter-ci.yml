@@ -46,6 +46,21 @@ jobs:
       - name: Run tests
         run: flutter test --coverage
 
+      - name: Enforce minimum line coverage
+        shell: bash
+        run: |
+          awk -F: '
+            /^LF:/ { total += $2 }
+            /^LH:/ { hit += $2 }
+            END {
+              if (total == 0 || hit / total < 0.50) {
+                printf "Line coverage %.1f%% is below the 50%% minimum\n", (hit / total) * 100
+                exit 1
+              }
+              printf "Line coverage: %.1f%%\n", (hit / total) * 100
+            }
+          ' coverage/lcov.info
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
