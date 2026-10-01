@@ -1,0 +1,25 @@
+name: Bug
+description: Relatar um problema reproduzível
+title: "[Bug]: "
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Resumo
+      description: O que aconteceu e qual era o comportamento esperado?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Reprodução
+      description: Liste passos, dispositivo, sistema e versão.
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacidade
+      options:
+        - label: Não incluí dados pessoais, fotos reais, tokens ou credenciais.
+          required: true

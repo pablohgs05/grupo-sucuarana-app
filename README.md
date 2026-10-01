@@ -1,8 +1,6 @@
 # Grupo Suçuarana — Relatórios de Operação
 
-Aplicativo offline-first para preenchimento de relatórios de operações socioambientais do Grupo Suçuarana, com exportação para PDF e sincronização posterior com a API.
-
-O projeto é voluntário e está sendo desenvolvido com foco em simplicidade, confiabilidade em campo e facilidade de manutenção por uma equipe pequena.
+Aplicativo offline-first para preenchimento de relatórios de operações socioambientais, com persistência local, exportação para PDF e sincronização posterior com a API. O projeto é voluntário, com foco em confiabilidade em campo, privacidade e manutenção por uma equipe pequena.
 
 ## Estrutura
 
@@ -35,13 +33,14 @@ O projeto é voluntário e está sendo desenvolvido com foco em simplicidade, co
 - **Interface simples:** poucos passos, textos claros e validação próxima do campo.
 - **Privacidade:** dados de vítimas e fotos não devem ser enviados para serviços externos não autorizados.
 
-## Começando
+## Começando no Windows
 
 ### Pré-requisitos
 
-- Flutter stable e Dart compatíveis com o SDK definido em `app-mobile/pubspec.yaml`
-- Java 21 e Maven 3.9+ (ou Maven Wrapper)
-- MySQL 8+ para o ambiente de backend
+- Git, Flutter stable/Dart, Android Studio com SDK e emulador, JDK 21 e Maven 3.9+.
+- Docker Desktop é opcional e usado somente para o MySQL local.
+
+O passo a passo de instalação do Flutter, Android Studio, Java, Maven e MySQL está em [docs/06-setup-windows.md](docs/06-setup-windows.md).
 
 ### Mobile
 
@@ -56,13 +55,21 @@ flutter run
 ### Backend
 
 ```bash
+cd ..
+docker compose up -d mysql # opcional
 cd backend
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
 
-No Windows, use `mvnw.cmd spring-boot:run`.
+No Windows, use `mvnw.cmd` se o Maven Wrapper estiver disponível. O backend expõe `GET http://localhost:8080/api/health` sem autenticação e a documentação em `/swagger-ui.html`. O banco só será usado quando as migrations do domínio forem implementadas.
 
-O backend inicial sobe com endpoints de saúde e documentação habilitáveis conforme a implementação das próximas etapas. Configurações locais devem ser feitas por variáveis de ambiente; nunca com credenciais versionadas.
+Para preparar o ambiente, copie `.env.example` para `.env` e ajuste apenas localmente. Nunca versione credenciais.
+
+Verificação completa:
+
+```powershell
+.\scripts\verify.ps1
+```
 
 ## Documentação
 
@@ -71,12 +78,20 @@ O backend inicial sobe com endpoints de saúde e documentação habilitáveis co
 - [Modelo inicial de dados](docs/03-modelo-de-dados.md)
 - [Guia de desenvolvimento](docs/04-desenvolvimento.md)
 - [Roadmap](docs/05-roadmap.md)
+- [Setup detalhado no Windows](docs/06-setup-windows.md)
+- [Segurança e LGPD](docs/07-seguranca-lgpd.md)
+- [Contribuição](CONTRIBUTING.md)
+- [Status atual](STATUS.md)
+- [Changelog](CHANGELOG.md)
 
 ## Status
 
-Fase de fundação: estrutura inicial e decisões arquiteturais. Ainda não há funcionalidades de negócio implementadas.
+Fase de fundação executável: o shell Flutter, o endpoint de saúde e os testes mínimos estão prontos. Persistência, formulário, PDF, sincronização e autenticação continuam fora desta etapa. Consulte [STATUS.md](STATUS.md) e o [roadmap](docs/05-roadmap.md).
+
+## Critérios de pronto do MVP
+
+O MVP será considerado pronto quando uma pessoa autorizada conseguir criar e revisar um relatório sem internet, salvar rascunhos e anexos localmente, gerar/compartilhar o PDF, sincronizar de forma idempotente quando houver conexão e recuperar o trabalho após falhas. Isso deve estar coberto por testes automatizados, teste em Android físico, revisão de segurança/LGPD e documentação de operação.
 
 ## Licença
 
 Projeto desenvolvido para uso social e voluntário pelo Grupo Suçuarana. A licença e as regras de distribuição devem ser confirmadas com a organização antes da primeira publicação.
-

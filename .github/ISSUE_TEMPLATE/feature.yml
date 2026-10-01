@@ -1,0 +1,25 @@
+name: Feature
+description: Propor uma melhoria alinhada ao MVP
+title: "[Feature]: "
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema e usuário
+      description: Quem precisa disso e por quê?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critérios de aceite
+      description: Como saberemos que está pronto?
+    validations:
+      required: true
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Escopo
+      options:
+        - label: Mantém offline-first e não amplia o MVP sem justificativa.
+          required: true

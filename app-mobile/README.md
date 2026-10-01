@@ -2,7 +2,7 @@
 
 Aplicativo Flutter para criação de relatórios offline-first.
 
-O projeto Flutter completo será inicializado na primeira implementação funcional. Este diretório já fixa a stack, dependências planejadas e convenções para que a equipe possa executar `flutter create .` sem reorganizar o monorepo.
+Esta pasta já contém uma base Flutter executável, com `lib/main.dart` e um teste de widget. As funcionalidades de negócio serão adicionadas incrementalmente, sem quebrar a organização abaixo.
 
 Estrutura alvo:
 
@@ -18,4 +18,3 @@ lib/
 │       └── presentation/
 └── main.dart
 ```
-
