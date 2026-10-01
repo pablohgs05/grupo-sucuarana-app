@@ -10,6 +10,8 @@ abstract interface class ReportRepository {
   Future<List<Report>> load();
 
   Future<void> save(List<Report> reports);
+
+  Future<void> upsert(Report report);
 }
 
 class ReportStore implements ReportRepository {
@@ -57,24 +59,7 @@ class ReportStore implements ReportRepository {
 
     await db.transaction((transaction) async {
       for (final report in reports) {
-        final existing = await transaction.query(
-          _table,
-          columns: const ['id'],
-          where: 'id = ?',
-          whereArgs: [report.id],
-          limit: 1,
-        );
-
-        if (existing.isEmpty) {
-          await transaction.insert(_table, _insertValues(report));
-        } else {
-          await transaction.update(
-            _table,
-            _updateValues(report),
-            where: 'id = ?',
-            whereArgs: [report.id],
-          );
-        }
+        await _upsertInTransaction(transaction, report);
       }
 
       final storedRows = await transaction.query(
@@ -92,6 +77,14 @@ class ReportStore implements ReportRepository {
         }
       }
     });
+  }
+
+  @override
+  Future<void> upsert(Report report) async {
+    final db = await _open();
+    await db.transaction(
+      (transaction) => _upsertInTransaction(transaction, report),
+    );
   }
 
   Future<void> close() async {
@@ -176,15 +169,41 @@ class ReportStore implements ReportRepository {
     await preferences.setBool(_legacyMigrationDoneKey, true);
   }
 
+  Future<void> _upsertInTransaction(
+    Transaction transaction,
+    Report report,
+  ) async {
+    final existing = await transaction.query(
+      _table,
+      columns: const ['id'],
+      where: 'id = ?',
+      whereArgs: [report.id],
+      limit: 1,
+    );
+
+    if (existing.isEmpty) {
+      await transaction.insert(_table, _insertValues(report));
+      return;
+    }
+
+    await transaction.update(
+      _table,
+      _updateValues(report),
+      where: 'id = ?',
+      whereArgs: [report.id],
+    );
+  }
+
   Map<String, Object?> _insertValues(Report report) {
-    final updatedAt = report.updatedAt.toUtc().toIso8601String();
     return {
       'id': report.id,
       'schema_version': _reportSchemaVersion,
       'payload_json': jsonEncode(report.toJson()),
+      // This column remains the transport/sync status for database v1.
+      // Report lifecycle is persisted independently inside payload_json.
       'status': report.syncStatus.name,
-      'created_at': updatedAt,
-      'updated_at': updatedAt,
+      'created_at': report.createdAt.toUtc().toIso8601String(),
+      'updated_at': report.updatedAt.toUtc().toIso8601String(),
     };
   }
 
