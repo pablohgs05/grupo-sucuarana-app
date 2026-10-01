@@ -87,9 +87,10 @@ Verificação completa:
 ## Proteções do repositório
 
 Pull requests para `main` e `dev` passam pelo GitHub Actions antes de serem
-aceitos. O CI executa análise e testes Flutter com cobertura, testes do backend
-e revisão de dependências. O CodeQL analisa o código Java e o Dependabot
-propõe atualizações periódicas de dependências e Actions.
+aceitos. O CI executa análise e testes Flutter com cobertura e testes do
+backend. O CodeQL analisa o código Java, o secret scanning com push protection
+está ativo e o Dependabot propõe atualizações periódicas de dependências e
+Actions.
 
 Não faça push direto nessas branches: abra uma pull request e aguarde os checks
 obrigatórios. A cobertura gerada fica disponível como artefato da execução do
