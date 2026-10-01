@@ -94,9 +94,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _sync() async {
-    final pending = _reports
-        .where((item) => item.syncStatus == SyncStatus.pending)
-        .toList();
+    final pending = reportsEligibleForSync(_reports);
     var synced = 0;
     for (final report in pending) {
       try {
@@ -133,9 +131,7 @@ class _HomePageState extends State<HomePage> {
         appBar: AppBar(
           title: const Text('Grupo Suçuarana'),
           actions: [
-            if (_reports.any(
-              (item) => item.syncStatus == SyncStatus.pending,
-            ))
+            if (_reports.any(isReportSyncEligible))
               IconButton(
                 onPressed: _sync,
                 tooltip: 'Sincronizar',
