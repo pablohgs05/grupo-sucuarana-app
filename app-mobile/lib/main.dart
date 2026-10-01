@@ -37,6 +37,7 @@ class _HomePageState extends State<HomePage> {
   final _syncService = ReportSync();
   List<Report> _reports = [];
   bool _loading = true;
+  String? _loadError;
 
   @override
   void initState() {
@@ -46,9 +47,32 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _reload() async {
-    final reports = await _store.load();
-    if (mounted) setState(() => _reports = reports..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)));
-    if (mounted) setState(() => _loading = false);
+    try {
+      final reports = await _store.load();
+      final sortedReports = [...reports]
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+      if (!mounted) return;
+      setState(() {
+        _reports = sortedReports;
+        _loading = false;
+        _loadError = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadError = 'Não foi possível carregar os relatórios salvos.';
+      });
+    }
+  }
+
+  void _retryLoad() {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    _reload();
   }
 
   Future<void> _edit([Report? report]) async {
@@ -114,9 +138,28 @@ class _HomePageState extends State<HomePage> {
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
-            : _reports.isEmpty
-                ? _EmptyState(onCreate: _edit)
-                : ListView(
+            : _loadError != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline, size: 56),
+                          const SizedBox(height: 12),
+                          Text(_loadError!, textAlign: TextAlign.center),
+                          const SizedBox(height: 16),
+                          OutlinedButton(
+                            onPressed: _retryLoad,
+                            child: const Text('Tentar novamente'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _reports.isEmpty
+                    ? _EmptyState(onCreate: _edit)
+                    : ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                     children: [
                       Text('Relatórios de operação', style: Theme.of(context).textTheme.headlineSmall),
