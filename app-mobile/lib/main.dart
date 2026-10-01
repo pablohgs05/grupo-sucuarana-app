@@ -11,37 +11,68 @@ import 'report_store.dart';
 void main() => runApp(const GrupoSucuaranaApp());
 
 class GrupoSucuaranaApp extends StatelessWidget {
-  const GrupoSucuaranaApp({super.key});
+  const GrupoSucuaranaApp({super.key, this.reportRepository});
+
+  final ReportRepository? reportRepository;
+
   @override
   Widget build(BuildContext context) => MaterialApp(
         title: 'Grupo Suçuarana',
         theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.green), useMaterial3: true),
-        home: const HomePage(),
+        home: HomePage(reportRepository: reportRepository),
       );
 }
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.reportRepository});
+
+  final ReportRepository? reportRepository;
+
   @override
   State<HomePage> createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  final _store = ReportStore();
+  late final ReportRepository _store;
   final _syncService = ReportSync();
   List<Report> _reports = [];
   bool _loading = true;
+  String? _loadError;
 
   @override
   void initState() {
     super.initState();
+    _store = widget.reportRepository ?? ReportStore();
     _reload();
   }
 
   Future<void> _reload() async {
-    final reports = await _store.load();
-    if (mounted) setState(() => _reports = reports..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)));
-    if (mounted) setState(() => _loading = false);
+    try {
+      final reports = await _store.load();
+      final sortedReports = [...reports]
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+      if (!mounted) return;
+      setState(() {
+        _reports = sortedReports;
+        _loading = false;
+        _loadError = null;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _loadError = 'Não foi possível carregar os relatórios salvos.';
+      });
+    }
+  }
+
+  void _retryLoad() {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    _reload();
   }
 
   Future<void> _edit([Report? report]) async {
@@ -107,9 +138,28 @@ class _HomePageState extends State<HomePage> {
         ),
         body: _loading
             ? const Center(child: CircularProgressIndicator())
-            : _reports.isEmpty
-                ? _EmptyState(onCreate: _edit)
-                : ListView(
+            : _loadError != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline, size: 56),
+                          const SizedBox(height: 12),
+                          Text(_loadError!, textAlign: TextAlign.center),
+                          const SizedBox(height: 16),
+                          OutlinedButton(
+                            onPressed: _retryLoad,
+                            child: const Text('Tentar novamente'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _reports.isEmpty
+                    ? _EmptyState(onCreate: _edit)
+                    : ListView(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                     children: [
                       Text('Relatórios de operação', style: Theme.of(context).textTheme.headlineSmall),
