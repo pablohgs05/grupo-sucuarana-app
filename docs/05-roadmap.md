@@ -3,6 +3,9 @@
 ## Fundação
 
 - [x] Monorepo e documentação inicial.
+- [x] Shell Flutter executável com teste mínimo.
+- [x] Backend executável com endpoint de saúde e teste.
+- [x] Setup Windows, ambiente sem segredos e MySQL local opcional.
 - [ ] Confirmar requisitos com o Grupo Suçuarana.
 - [ ] Definir identidade visual, logo autorizada e campos obrigatórios.
 - [ ] Criar ambiente de desenvolvimento reproduzível.
@@ -16,6 +19,10 @@
 - [ ] Visualização e compartilhamento.
 - [ ] API mínima para sincronização.
 - [ ] Teste de campo em Android.
+
+## Critérios de priorização
+
+Priorize primeiro segurança e preservação de dados, depois o fluxo offline de criação/recuperação, depois PDF e só então sincronização, histórico e recursos administrativos. Nenhuma funcionalidade deve exigir conectividade para salvar um relatório.
 
 ## V2
 
@@ -31,4 +38,3 @@
 - [ ] Mapa da área de busca.
 - [ ] Assinatura digital.
 - [ ] Painel web e relatórios administrativos.
-
