@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grupo_sucuarana_app/main.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
+
   testWidgets('exibe a tela inicial do aplicativo', (tester) async {
     await tester.pumpWidget(const GrupoSucuaranaApp());
     await tester.pump(const Duration(milliseconds: 200));
