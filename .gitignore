@@ -1,0 +1,34 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+.pub/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.metadata
+pubspec.lock
+
+# Android/Gradle
+**/android/.gradle/
+**/android/local.properties
+**/android/.idea/
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+
+# Java/Spring
+backend/target/
+backend/.mvn/
+
+# IDEs and OS files
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local secrets and environment files
+.env
+.env.*
+!.env.example
+

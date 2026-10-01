@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: relatorios-api
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/grupo_sucuarana}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: ${PORT:8080}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
