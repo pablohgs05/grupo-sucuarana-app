@@ -48,6 +48,39 @@ void main() {
     expect(loaded.single.toJson(), equals(report.toJson()));
   });
 
+  test('upsert updates one report without deleting the others', () async {
+    final first = _fakeReport(id: 'report-001', title: 'Primeiro');
+    final second = _fakeReport(id: 'report-002', title: 'Segundo');
+
+    final store = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    await store.save([first, second]);
+
+    final updatedFirst = _fakeReport(
+      id: first.id,
+      title: 'Primeiro atualizado',
+      updatedAt: DateTime.utc(2026, 10, 1, 13),
+      lifecycle: ReportLifecycle.draft,
+      lastEditedStep: 3,
+    );
+    await store.upsert(updatedFirst);
+
+    final loaded = await store.load();
+    await store.close();
+
+    expect(loaded, hasLength(2));
+    expect(
+      loaded.singleWhere((report) => report.id == first.id).title,
+      'Primeiro atualizado',
+    );
+    expect(
+      loaded.singleWhere((report) => report.id == second.id).title,
+      'Segundo',
+    );
+  });
+
   test('migrates legacy SharedPreferences data without deleting it', () async {
     final report = _fakeReport();
     final legacyJson = jsonEncode(report.toJson());
@@ -77,11 +110,18 @@ void main() {
   });
 }
 
-Report _fakeReport() {
+Report _fakeReport({
+  String id = 'report-test-001',
+  String title = 'Operação de teste',
+  DateTime? updatedAt,
+  ReportLifecycle lifecycle = ReportLifecycle.readyForReview,
+  int lastEditedStep = 0,
+}) {
+  final timestamp = updatedAt ?? DateTime.utc(2026, 10, 1, 12, 30);
   return Report(
-    id: 'report-test-001',
+    id: id,
     identification: Identification(
-      title: 'Operação de teste',
+      title: title,
       date: DateTime.utc(2026, 10, 1),
       coordinator: 'Equipe de teste',
     ),
@@ -103,7 +143,10 @@ Report _fakeReport() {
     resources: const ['Recurso de teste'],
     conclusion: 'Conclusão fictícia.',
     attachments: const [],
-    updatedAt: DateTime.utc(2026, 10, 1, 12, 30),
+    createdAt: DateTime.utc(2026, 10, 1, 12),
+    updatedAt: timestamp,
+    lifecycle: lifecycle,
+    lastEditedStep: lastEditedStep,
     syncStatus: SyncStatus.pending,
   );
 }
