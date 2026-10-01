@@ -14,6 +14,9 @@ Instalações que ainda tenham relatórios no armazenamento legado de
 legada é preservada após a migração para evitar exclusão silenciosa de dados;
 SQLite passa a ser a fonte local de verdade.
 
+Pull requests que alteram `app-mobile/**` são validadas automaticamente pelo
+GitHub Actions com `flutter analyze` e `flutter test`.
+
 Esta pasta já contém uma base Flutter executável, com `lib/main.dart` e testes
 de widget/persistência. As funcionalidades de negócio serão adicionadas
 incrementalmente, sem quebrar a organização abaixo.
