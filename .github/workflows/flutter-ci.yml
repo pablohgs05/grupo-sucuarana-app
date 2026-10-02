@@ -62,7 +62,7 @@ jobs:
           ' coverage/lcov.info
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: flutter-coverage
           path: app-mobile/coverage/lcov.info
