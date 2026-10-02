@@ -479,6 +479,7 @@ class _ReportFormPageState extends State<ReportFormPage>
           date: _date,
           coordinator: _text('coordinator'),
         ),
+        searchTriage: widget.report?.searchTriage,
         missing: MissingPerson(
           name: _text('missingName'),
           lastSeen: _text('lastSeen'),
