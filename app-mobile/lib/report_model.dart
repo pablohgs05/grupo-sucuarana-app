@@ -1,13 +1,16 @@
+import 'search_triage.dart';
+
 class Report {
-  const Report({
+  Report({
     required this.id,
     required this.identification,
-    required this.missing,
+    SearchTriage? searchTriage,
+    MissingPerson? missing,
     required this.operation,
-    required this.physicalDescription,
-    required this.clothing,
-    required this.health,
-    required this.procedures,
+    String? physicalDescription,
+    String? clothing,
+    String? health,
+    String? procedures,
     required this.teams,
     required this.resources,
     required this.conclusion,
@@ -17,16 +20,30 @@ class Report {
     required this.lifecycle,
     required this.lastEditedStep,
     required this.syncStatus,
-  });
+  }) : searchTriage = searchTriage == null
+            ? SearchTriage.fromLegacy(
+                name: missing?.name ?? '',
+                lastSeen: missing?.lastSeen ?? '',
+                contact: missing?.contact ?? '',
+                physicalDescription: physicalDescription ?? '',
+                clothing: clothing ?? '',
+                health: health ?? '',
+                procedures: procedures ?? '',
+              )
+            : searchTriage.mergeLegacy(
+                name: missing?.name,
+                lastSeen: missing?.lastSeen,
+                contact: missing?.contact,
+                physicalDescription: physicalDescription,
+                clothing: clothing,
+                health: health,
+                procedures: procedures,
+              );
 
   final String id;
   final Identification identification;
-  final MissingPerson missing;
+  final SearchTriage searchTriage;
   final Operation operation;
-  final String physicalDescription;
-  final String clothing;
-  final String health;
-  final String procedures;
   final List<String> teams;
   final List<String> resources;
   final String conclusion;
@@ -40,6 +57,20 @@ class Report {
   String get title => identification.title;
   String get location => operation.location;
 
+  // Temporary compatibility accessors until M4 migrates the form UI to the
+  // structured triage fields. SearchTriage remains the single source of truth.
+  MissingPerson get missing => MissingPerson(
+        name: searchTriage.person.name,
+        lastSeen: searchTriage.lastSeen.legacySummary,
+        contact: searchTriage.person.referenceContact,
+      );
+
+  String get physicalDescription =>
+      searchTriage.physicalDescription.legacySummary;
+  String get clothing => searchTriage.clothingAndAccessories.legacySummary;
+  String get health => searchTriage.healthAndBehavior.legacySummary;
+  String get procedures => searchTriage.previousActions.description;
+
   Report copyWith({
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -50,12 +81,8 @@ class Report {
       Report(
         id: id,
         identification: identification,
-        missing: missing,
+        searchTriage: searchTriage,
         operation: operation,
-        physicalDescription: physicalDescription,
-        clothing: clothing,
-        health: health,
-        procedures: procedures,
         teams: teams,
         resources: resources,
         conclusion: conclusion,
@@ -70,8 +97,12 @@ class Report {
   Map<String, dynamic> toJson() => {
         'id': id,
         'identification': identification.toJson(),
-        'missing': missing.toJson(),
+        'searchTriage': searchTriage.toJson(),
         'operation': operation.toJson(),
+
+        // Transitional mirrors are derived from SearchTriage so older
+        // consumers can keep reading the payload during the M3 -> M4 bridge.
+        'missing': missing.toJson(),
         'physicalDescription': physicalDescription,
         'clothing': clothing,
         'health': health,
@@ -91,26 +122,21 @@ class Report {
     final updatedAt = DateTime.parse(json['updatedAt'] as String);
     final createdAtValue = json['createdAt'] as String?;
     final lifecycleValue = json['lifecycle'] as String?;
+    final searchTriageValue = json['searchTriage'];
 
-    return Report(
+    final common = (
       id: json['id'] as String,
       identification: Identification.fromJson(
         Map<String, dynamic>.from(json['identification'] as Map),
       ),
-      missing: MissingPerson.fromJson(
-        Map<String, dynamic>.from(json['missing'] as Map),
-      ),
       operation: Operation.fromJson(
         Map<String, dynamic>.from(json['operation'] as Map),
       ),
-      physicalDescription: json['physicalDescription'] as String? ?? '',
-      clothing: json['clothing'] as String? ?? '',
-      health: json['health'] as String? ?? '',
-      procedures: json['procedures'] as String? ?? '',
       teams: List<String>.from(json['teams'] as List? ?? const []),
       resources: List<String>.from(json['resources'] as List? ?? const []),
       conclusion: json['conclusion'] as String? ?? '',
-      attachments: List<String>.from(json['attachments'] as List? ?? const []),
+      attachments:
+          List<String>.from(json['attachments'] as List? ?? const []),
       createdAt: createdAtValue == null
           ? updatedAt
           : DateTime.tryParse(createdAtValue) ?? updatedAt,
@@ -124,6 +150,49 @@ class Report {
         (value) => value.name == json['syncStatus'],
         orElse: () => SyncStatus.pending,
       ),
+    );
+
+    if (searchTriageValue is Map) {
+      return Report(
+        id: common.id,
+        identification: common.identification,
+        searchTriage: SearchTriage.fromJson(
+          Map<String, dynamic>.from(searchTriageValue),
+        ),
+        operation: common.operation,
+        teams: common.teams,
+        resources: common.resources,
+        conclusion: common.conclusion,
+        attachments: common.attachments,
+        createdAt: common.createdAt,
+        updatedAt: common.updatedAt,
+        lifecycle: common.lifecycle,
+        lastEditedStep: common.lastEditedStep,
+        syncStatus: common.syncStatus,
+      );
+    }
+
+    final missingValue = json['missing'];
+    return Report(
+      id: common.id,
+      identification: common.identification,
+      missing: missingValue is Map
+          ? MissingPerson.fromJson(Map<String, dynamic>.from(missingValue))
+          : MissingPerson.empty,
+      operation: common.operation,
+      physicalDescription: json['physicalDescription'] as String? ?? '',
+      clothing: json['clothing'] as String? ?? '',
+      health: json['health'] as String? ?? '',
+      procedures: json['procedures'] as String? ?? '',
+      teams: common.teams,
+      resources: common.resources,
+      conclusion: common.conclusion,
+      attachments: common.attachments,
+      createdAt: common.createdAt,
+      updatedAt: common.updatedAt,
+      lifecycle: common.lifecycle,
+      lastEditedStep: common.lastEditedStep,
+      syncStatus: common.syncStatus,
     );
   }
 }
@@ -162,6 +231,8 @@ class MissingPerson {
     required this.lastSeen,
     required this.contact,
   });
+
+  static const empty = MissingPerson(name: '', lastSeen: '', contact: '');
 
   final String name;
   final String lastSeen;
