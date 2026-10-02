@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grupo_sucuarana_app/report_model.dart';
 import 'package:grupo_sucuarana_app/report_store.dart';
+import 'package:grupo_sucuarana_app/search_triage.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -46,6 +47,58 @@ void main() {
 
     expect(loaded, hasLength(1));
     expect(loaded.single.toJson(), equals(report.toJson()));
+  });
+
+  test('persists structured triage fields after reopening', () async {
+    final report = _fakeReport(
+      searchTriage: const SearchTriage(
+        metadata: TriageMetadata(
+          formNumber: 'FORM-DB-FICTICIO',
+          factDate: '02/10/2026',
+          factTime: '09:00',
+          noticeDate: '02/10/2026',
+          noticeTime: '09:30',
+        ),
+        person: PersonIdentification.empty,
+        relatedPeople: <RelatedPerson>[
+          RelatedPerson(
+            relation: 'Familiar fictício',
+            name: 'Pessoa fictícia',
+            contact: 'Contato fictício',
+          ),
+        ],
+        historyAndDestination: HistoryAndDestination.empty,
+        transportation: Transportation.empty,
+        lastSeen: LastSeen.empty,
+        physicalDescription: PhysicalDescription.empty,
+        clothingAndAccessories: ClothingAndAccessories.empty,
+        personalSupplies: PersonalSupplies.empty,
+        healthAndBehavior: HealthAndBehavior.empty,
+        experienceAndResistance: ExperienceAndResistance.empty,
+        previousActions: PreviousActions.empty,
+      ),
+    );
+
+    final firstStore = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    await firstStore.upsert(report);
+    await firstStore.close();
+
+    final reopenedStore = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    final loaded = await reopenedStore.load();
+    await reopenedStore.close();
+
+    expect(loaded.single.searchTriage.metadata.formNumber, 'FORM-DB-FICTICIO');
+    expect(loaded.single.searchTriage.relatedPeople, hasLength(1));
+    expect(
+      loaded.single.searchTriage.relatedPeople.single.relation,
+      'Familiar fictício',
+    );
   });
 
   test('upsert updates one report without deleting the others', () async {
@@ -116,6 +169,7 @@ Report _fakeReport({
   DateTime? updatedAt,
   ReportLifecycle lifecycle = ReportLifecycle.readyForReview,
   int lastEditedStep = 0,
+  SearchTriage? searchTriage,
 }) {
   final timestamp = updatedAt ?? DateTime.utc(2026, 10, 1, 12, 30);
   return Report(
@@ -125,6 +179,7 @@ Report _fakeReport({
       date: DateTime.utc(2026, 10, 1),
       coordinator: 'Equipe de teste',
     ),
+    searchTriage: searchTriage,
     missing: const MissingPerson(
       name: 'Pessoa fictícia',
       lastSeen: 'Local fictício',
