@@ -88,17 +88,71 @@ void main() {
   });
 
   testWidgets('navega pelo formulário estruturado', (tester) async {
-    await tester.pumpWidget(const MaterialApp(home: ReportFormPage()));
+    final repository = _FakeReportRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(reportRepository: repository),
+      ),
+    );
     await tester.pump();
 
     expect(find.text('Identificação'), findsOneWidget);
     expect(find.text('Título do relatório'), findsOneWidget);
     expect(find.text('Próximo'), findsWidgets);
+    expect(find.text('Rascunho local'), findsOneWidget);
+  });
+
+  testWidgets('salva rascunho automaticamente após edição', (tester) async {
+    final repository = _FakeReportRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(reportRepository: repository),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Título do relatório'),
+      'Rascunho fictício',
+    );
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pump();
+
+    expect(repository.upserts, isNotEmpty);
+    expect(repository.upserts.last.title, 'Rascunho fictício');
+    expect(repository.upserts.last.lifecycle, ReportLifecycle.draft);
+    expect(find.text('Salvo no dispositivo'), findsOneWidget);
+  });
+
+  testWidgets('restaura a etapa salva de um rascunho', (tester) async {
+    final repository = _FakeReportRepository();
+    final report = _fakeReport(
+      id: 'draft-001',
+      title: 'Rascunho recuperado',
+      updatedAt: DateTime.utc(2026, 10, 1, 15),
+      lifecycle: ReportLifecycle.draft,
+      lastEditedStep: 3,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(
+          report: report,
+          reportRepository: repository,
+        ),
+      ),
+    );
+
+    final stepper = tester.widget<Stepper>(find.byType(Stepper));
+    expect(stepper.currentStep, 3);
+    expect(find.text('Salvo no dispositivo'), findsOneWidget);
   });
 }
 
 class _FakeReportRepository implements ReportRepository {
   final List<Completer<List<Report>>> _loads = <Completer<List<Report>>>[];
+  final List<Report> upserts = <Report>[];
 
   @override
   Future<List<Report>> load() {
@@ -109,6 +163,11 @@ class _FakeReportRepository implements ReportRepository {
 
   @override
   Future<void> save(List<Report> reports) async {}
+
+  @override
+  Future<void> upsert(Report report) async {
+    upserts.add(report);
+  }
 
   void completeNext(List<Report> reports) {
     _pendingLoad.complete(reports);
@@ -126,6 +185,8 @@ Report _fakeReport({
   required String id,
   required String title,
   required DateTime updatedAt,
+  ReportLifecycle lifecycle = ReportLifecycle.readyForReview,
+  int lastEditedStep = 0,
 }) {
   return Report(
     id: id,
@@ -152,7 +213,10 @@ Report _fakeReport({
     resources: const <String>['Recurso de teste'],
     conclusion: 'Conclusão fictícia.',
     attachments: const <String>[],
+    createdAt: updatedAt.subtract(const Duration(hours: 1)),
     updatedAt: updatedAt,
+    lifecycle: lifecycle,
+    lastEditedStep: lastEditedStep,
     syncStatus: SyncStatus.pending,
   );
 }
