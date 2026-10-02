@@ -12,7 +12,10 @@ class Report {
     required this.resources,
     required this.conclusion,
     required this.attachments,
+    required this.createdAt,
     required this.updatedAt,
+    required this.lifecycle,
+    required this.lastEditedStep,
     required this.syncStatus,
   });
 
@@ -28,13 +31,23 @@ class Report {
   final List<String> resources;
   final String conclusion;
   final List<String> attachments;
+  final DateTime createdAt;
   final DateTime updatedAt;
+  final ReportLifecycle lifecycle;
+  final int lastEditedStep;
   final SyncStatus syncStatus;
 
   String get title => identification.title;
   String get location => operation.location;
 
-  Report copyWith({SyncStatus? syncStatus}) => Report(
+  Report copyWith({
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    ReportLifecycle? lifecycle,
+    int? lastEditedStep,
+    SyncStatus? syncStatus,
+  }) =>
+      Report(
         id: id,
         identification: identification,
         missing: missing,
@@ -47,7 +60,10 @@ class Report {
         resources: resources,
         conclusion: conclusion,
         attachments: attachments,
-        updatedAt: updatedAt,
+        createdAt: createdAt ?? this.createdAt,
+        updatedAt: updatedAt ?? this.updatedAt,
+        lifecycle: lifecycle ?? this.lifecycle,
+        lastEditedStep: lastEditedStep ?? this.lastEditedStep,
         syncStatus: syncStatus ?? this.syncStatus,
       );
 
@@ -64,45 +80,75 @@ class Report {
         'resources': resources,
         'conclusion': conclusion,
         'attachments': attachments,
+        'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
+        'lifecycle': lifecycle.name,
+        'lastEditedStep': lastEditedStep,
         'syncStatus': syncStatus.name,
       };
 
-  factory Report.fromJson(Map<String, dynamic> json) => Report(
-        id: json['id'] as String,
-        identification: Identification.fromJson(
-          Map<String, dynamic>.from(json['identification'] as Map),
-        ),
-        missing: MissingPerson.fromJson(Map<String, dynamic>.from(json['missing'] as Map)),
-        operation: Operation.fromJson(Map<String, dynamic>.from(json['operation'] as Map)),
-        physicalDescription: json['physicalDescription'] as String? ?? '',
-        clothing: json['clothing'] as String? ?? '',
-        health: json['health'] as String? ?? '',
-        procedures: json['procedures'] as String? ?? '',
-        teams: List<String>.from(json['teams'] as List? ?? const []),
-        resources: List<String>.from(json['resources'] as List? ?? const []),
-        conclusion: json['conclusion'] as String? ?? '',
-        attachments: List<String>.from(json['attachments'] as List? ?? const []),
-        updatedAt: DateTime.parse(json['updatedAt'] as String),
-        syncStatus: SyncStatus.values.firstWhere(
-          (value) => value.name == json['syncStatus'],
-          orElse: () => SyncStatus.pending,
-        ),
-      );
+  factory Report.fromJson(Map<String, dynamic> json) {
+    final updatedAt = DateTime.parse(json['updatedAt'] as String);
+    final createdAtValue = json['createdAt'] as String?;
+    final lifecycleValue = json['lifecycle'] as String?;
+
+    return Report(
+      id: json['id'] as String,
+      identification: Identification.fromJson(
+        Map<String, dynamic>.from(json['identification'] as Map),
+      ),
+      missing: MissingPerson.fromJson(
+        Map<String, dynamic>.from(json['missing'] as Map),
+      ),
+      operation: Operation.fromJson(
+        Map<String, dynamic>.from(json['operation'] as Map),
+      ),
+      physicalDescription: json['physicalDescription'] as String? ?? '',
+      clothing: json['clothing'] as String? ?? '',
+      health: json['health'] as String? ?? '',
+      procedures: json['procedures'] as String? ?? '',
+      teams: List<String>.from(json['teams'] as List? ?? const []),
+      resources: List<String>.from(json['resources'] as List? ?? const []),
+      conclusion: json['conclusion'] as String? ?? '',
+      attachments: List<String>.from(json['attachments'] as List? ?? const []),
+      createdAt: createdAtValue == null
+          ? updatedAt
+          : DateTime.tryParse(createdAtValue) ?? updatedAt,
+      updatedAt: updatedAt,
+      lifecycle: ReportLifecycle.values.firstWhere(
+        (value) => value.name == lifecycleValue,
+        orElse: () => ReportLifecycle.readyForReview,
+      ),
+      lastEditedStep: (json['lastEditedStep'] as num?)?.toInt() ?? 0,
+      syncStatus: SyncStatus.values.firstWhere(
+        (value) => value.name == json['syncStatus'],
+        orElse: () => SyncStatus.pending,
+      ),
+    );
+  }
 }
+
+enum ReportLifecycle { draft, readyForReview, finalized, exported }
 
 enum SyncStatus { pending, synced }
 
 class Identification {
-  const Identification({required this.title, required this.date, required this.coordinator});
+  const Identification({
+    required this.title,
+    required this.date,
+    required this.coordinator,
+  });
+
   final String title;
   final DateTime date;
   final String coordinator;
+
   Map<String, dynamic> toJson() => {
         'title': title,
         'date': date.toIso8601String(),
         'coordinator': coordinator,
       };
+
   factory Identification.fromJson(Map<String, dynamic> json) => Identification(
         title: json['title'] as String? ?? '',
         date: DateTime.parse(json['date'] as String),
@@ -111,11 +157,22 @@ class Identification {
 }
 
 class MissingPerson {
-  const MissingPerson({required this.name, required this.lastSeen, required this.contact});
+  const MissingPerson({
+    required this.name,
+    required this.lastSeen,
+    required this.contact,
+  });
+
   final String name;
   final String lastSeen;
   final String contact;
-  Map<String, dynamic> toJson() => {'name': name, 'lastSeen': lastSeen, 'contact': contact};
+
+  Map<String, dynamic> toJson() => {
+        'name': name,
+        'lastSeen': lastSeen,
+        'contact': contact,
+      };
+
   factory MissingPerson.fromJson(Map<String, dynamic> json) => MissingPerson(
         name: json['name'] as String? ?? '',
         lastSeen: json['lastSeen'] as String? ?? '',
@@ -124,11 +181,22 @@ class MissingPerson {
 }
 
 class Operation {
-  const Operation({required this.location, required this.start, required this.end});
+  const Operation({
+    required this.location,
+    required this.start,
+    required this.end,
+  });
+
   final String location;
   final String start;
   final String end;
-  Map<String, dynamic> toJson() => {'location': location, 'start': start, 'end': end};
+
+  Map<String, dynamic> toJson() => {
+        'location': location,
+        'start': start,
+        'end': end,
+      };
+
   factory Operation.fromJson(Map<String, dynamic> json) => Operation(
         location: json['location'] as String? ?? '',
         start: json['start'] as String? ?? '',
