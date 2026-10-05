@@ -17,48 +17,43 @@ void main() {
 
     expect(find.text('Revisar relatório'), findsOneWidget);
 
-    final reviewScroll = find.descendant(
-      of: find.byKey(const ValueKey('report-review-list')),
-      matching: find.byType(Scrollable),
-    );
-
     final personSection = find.byKey(
       const ValueKey('review-section-person'),
     );
-    await tester.scrollUntilVisible(
+    await tester.dragUntilVisible(
       personSection,
-      300,
-      scrollable: reviewScroll,
+      find.byKey(const ValueKey('report-review-list')),
+      const Offset(0, -300),
     );
     expect(find.text('Pessoa fictícia de revisão'), findsOneWidget);
 
     final transportSection = find.byKey(
       const ValueKey('review-section-transportation'),
     );
-    await tester.scrollUntilVisible(
+    await tester.dragUntilVisible(
       transportSection,
-      300,
-      scrollable: reviewScroll,
+      find.byKey(const ValueKey('report-review-list')),
+      const Offset(0, -300),
     );
     expect(find.text('Bicicleta fictícia'), findsOneWidget);
 
     final healthSection = find.byKey(
       const ValueKey('review-section-healthAndBehavior'),
     );
-    await tester.scrollUntilVisible(
+    await tester.dragUntilVisible(
       healthSection,
-      400,
-      scrollable: reviewScroll,
+      find.byKey(const ValueKey('report-review-list')),
+      const Offset(0, -400),
     );
     expect(find.text('Detalhe oculto antigo'), findsNothing);
 
     final attachmentsSection = find.byKey(
       const ValueKey('review-section-conclusionAndAttachments'),
     );
-    await tester.scrollUntilVisible(
+    await tester.dragUntilVisible(
       attachmentsSection,
-      600,
-      scrollable: reviewScroll,
+      find.byKey(const ValueKey('report-review-list')),
+      const Offset(0, -600),
     );
 
     expect(
@@ -99,13 +94,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final editPerson = find.byKey(const ValueKey('edit-person'));
-    await tester.scrollUntilVisible(
+    await tester.dragUntilVisible(
       editPerson,
-      250,
-      scrollable: find.descendant(
-        of: find.byKey(const ValueKey('report-review-list')),
-        matching: find.byType(Scrollable),
-      ),
+      find.byKey(const ValueKey('report-review-list')),
+      const Offset(0, -250),
     );
     await tester.tap(editPerson);
     await tester.pumpAndSettle();
@@ -146,13 +138,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final confirm = find.byKey(const ValueKey('confirm-review'));
-    await tester.scrollUntilVisible(
+    await tester.dragUntilVisible(
       confirm,
-      700,
-      scrollable: find.descendant(
-        of: find.byKey(const ValueKey('report-review-list')),
-        matching: find.byType(Scrollable),
-      ),
+      find.byKey(const ValueKey('report-review-list')),
+      const Offset(0, -700),
     );
     await tester.tap(confirm);
     await tester.pumpAndSettle();
