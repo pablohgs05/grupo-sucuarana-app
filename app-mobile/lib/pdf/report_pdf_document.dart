@@ -135,12 +135,6 @@ pw.Widget _cover(ReportPdfPlan plan) {
           color: PdfColors.green800,
         ),
       ),
-      pw.SizedBox(height: 4),
-      pw.Text(
-        'Responsável pelo relatório',
-        textAlign: pw.TextAlign.center,
-        style: const pw.TextStyle(fontSize: 10),
-      ),
       pw.SizedBox(height: 28),
       pw.Text(
         plan.title,
