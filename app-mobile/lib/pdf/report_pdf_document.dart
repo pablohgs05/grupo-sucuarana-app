@@ -19,7 +19,7 @@ Future<Uint8List?> loadLocalReportAttachment(
   try {
     final file = File(attachment.localPath);
     if (!await file.exists()) return null;
-    return file.readAsBytes();
+    return await file.readAsBytes();
   } catch (_) {
     return null;
   }
