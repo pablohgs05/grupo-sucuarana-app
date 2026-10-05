@@ -264,6 +264,7 @@ class ReportReviewPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Revisar relatório')),
       body: ListView(
+        key: const ValueKey('report-review-list'),
         padding: const EdgeInsets.all(16),
         children: [
           const Card(
