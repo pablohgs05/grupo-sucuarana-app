@@ -82,8 +82,8 @@ void main() {
     );
     await external.writeAsBytes(<int>[4, 5, 6]);
 
-    expect(
-      () => storage.delete(
+    await expectLater(
+      storage.delete(
         ReportAttachment(
           id: 'unsafe',
           localPath: external.path,
