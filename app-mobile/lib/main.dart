@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'report_form_page.dart';
 import 'report_model.dart';
+import 'report_pdf_preview_page.dart';
 import 'report_store.dart';
 import 'report_sync.dart';
 
@@ -88,6 +89,14 @@ class _HomePageState extends State<HomePage> {
       ),
     );
     if (mounted) await _reload();
+  }
+
+  Future<void> _preview(Report report) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ReportPdfPreviewPage(report: report),
+      ),
+    );
   }
 
   Future<void> _sync() async {
@@ -193,7 +202,24 @@ class _HomePageState extends State<HomePage> {
                                       : report.title,
                                 ),
                                 subtitle: Text(_reportSubtitle(report)),
-                                trailing: const Icon(Icons.chevron_right),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (report.lifecycle !=
+                                        ReportLifecycle.draft)
+                                      IconButton(
+                                        key: ValueKey(
+                                          'preview-report-${report.id}',
+                                        ),
+                                        onPressed: () => _preview(report),
+                                        tooltip: 'Visualizar PDF',
+                                        icon: const Icon(
+                                          Icons.picture_as_pdf_outlined,
+                                        ),
+                                      ),
+                                    const Icon(Icons.chevron_right),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
