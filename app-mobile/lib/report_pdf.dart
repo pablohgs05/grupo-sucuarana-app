@@ -36,7 +36,11 @@ Future<void> exportReportPdf(Report report) async {
     'Equipes': [report.teams.join('\n')],
     'Recursos utilizados': [report.resources.join('\n')],
     'Conclusão': [report.conclusion],
-    'Anexos': [report.attachments.isEmpty ? 'Nenhum anexo' : report.attachments.join('\n')],
+    'Anexos': [
+      report.attachmentItems.isEmpty
+          ? 'Nenhum anexo'
+          : report.attachmentItems.map(_attachmentLabel).join('\n'),
+    ],
   };
   document.addPage(
     pw.MultiPage(
@@ -58,3 +62,11 @@ Future<void> exportReportPdf(Report report) async {
 
 String _date(DateTime value) =>
     '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
+
+
+String _attachmentLabel(dynamic attachment) {
+  final name = attachment.originalName as String;
+  final caption = attachment.caption as String;
+  if (caption.trim().isEmpty) return name;
+  return '$name — ${caption.trim()}';
+}
