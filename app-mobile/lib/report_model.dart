@@ -1,4 +1,5 @@
 import 'operational_report.dart';
+import 'report_attachment.dart';
 import 'search_triage.dart';
 
 class Report {
@@ -16,7 +17,8 @@ class Report {
     List<String>? teams,
     List<String>? resources,
     String? conclusion,
-    required this.attachments,
+    List<String>? attachments,
+    List<ReportAttachment>? attachmentItems,
     required this.createdAt,
     required this.updatedAt,
     required this.lifecycle,
@@ -47,14 +49,25 @@ class Report {
               teams: teams ?? const <String>[],
               resources: resources ?? const <String>[],
               conclusion: conclusion ?? '',
-            );
+            ),
+        attachmentItems = attachmentItems ??
+            (attachments ?? const <String>[])
+                .asMap()
+                .entries
+                .map(
+                  (entry) => ReportAttachment.fromLegacyPath(
+                    entry.value,
+                    entry.key,
+                  ),
+                )
+                .toList(growable: false);
 
   final String id;
   final Identification identification;
   final SearchTriage searchTriage;
   final Operation operation;
   final OperationalReportContent operationalContent;
-  final List<String> attachments;
+  final List<ReportAttachment> attachmentItems;
   final DateTime createdAt;
   final DateTime updatedAt;
   final ReportLifecycle lifecycle;
@@ -71,6 +84,9 @@ class Report {
       .map((resource) => resource.legacySummary)
       .toList(growable: false);
   String get conclusion => operationalContent.conclusion;
+  List<String> get attachments => attachmentItems
+      .map((attachment) => attachment.localPath)
+      .toList(growable: false);
 
   // Temporary compatibility accessors until M4 migrates the form UI to the
   // structured triage fields. SearchTriage remains the single source of truth.
@@ -88,6 +104,7 @@ class Report {
 
   Report copyWith({
     OperationalReportContent? operationalContent,
+    List<ReportAttachment>? attachmentItems,
     DateTime? createdAt,
     DateTime? updatedAt,
     ReportLifecycle? lifecycle,
@@ -101,7 +118,7 @@ class Report {
         searchTriage: searchTriage,
         operation: operation,
         operationalContent: operationalContent ?? this.operationalContent,
-        attachments: attachments,
+        attachmentItems: attachmentItems ?? this.attachmentItems,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         lifecycle: lifecycle ?? this.lifecycle,
@@ -127,6 +144,8 @@ class Report {
         'teams': teams,
         'resources': resources,
         'conclusion': conclusion,
+        'attachmentItems':
+            attachmentItems.map((attachment) => attachment.toJson()).toList(),
         'attachments': attachments,
         'createdAt': createdAt.toIso8601String(),
         'updatedAt': updatedAt.toIso8601String(),
@@ -142,6 +161,27 @@ class Report {
     final lifecycleValue = json['lifecycle'] as String?;
     final searchTriageValue = json['searchTriage'];
     final operationalContentValue = json['operationalContent'];
+    final attachmentItemsValue = json['attachmentItems'];
+
+    final attachmentItems = attachmentItemsValue is List
+        ? attachmentItemsValue
+            .whereType<Map>()
+            .map(
+              (item) => ReportAttachment.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .toList(growable: false)
+        : List<String>.from(json['attachments'] as List? ?? const [])
+            .asMap()
+            .entries
+            .map(
+              (entry) => ReportAttachment.fromLegacyPath(
+                entry.value,
+                entry.key,
+              ),
+            )
+            .toList(growable: false);
 
     final operationalContent = operationalContentValue is Map
         ? OperationalReportContent.fromJson(
@@ -163,8 +203,7 @@ class Report {
         Map<String, dynamic>.from(json['operation'] as Map),
       ),
       operationalContent: operationalContent,
-      attachments:
-          List<String>.from(json['attachments'] as List? ?? const []),
+      attachmentItems: attachmentItems,
       createdAt: createdAtValue == null
           ? updatedAt
           : DateTime.tryParse(createdAtValue) ?? updatedAt,
@@ -190,7 +229,7 @@ class Report {
         ),
         operation: common.operation,
         operationalContent: common.operationalContent,
-        attachments: common.attachments,
+        attachmentItems: common.attachmentItems,
         createdAt: common.createdAt,
         updatedAt: common.updatedAt,
         lifecycle: common.lifecycle,
@@ -213,7 +252,7 @@ class Report {
       clothing: json['clothing'] as String? ?? '',
       health: json['health'] as String? ?? '',
       procedures: json['procedures'] as String? ?? '',
-      attachments: common.attachments,
+      attachmentItems: common.attachmentItems,
       createdAt: common.createdAt,
       updatedAt: common.updatedAt,
       lifecycle: common.lifecycle,
