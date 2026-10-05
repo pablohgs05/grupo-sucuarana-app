@@ -145,6 +145,18 @@ void main() {
     );
   });
 
+  test('preserva identificador estável da seção em edição', () {
+    final report = _report().copyWith(
+      lastEditedStep: 4,
+      lastEditedSection: 'transportation',
+    );
+
+    final decoded = Report.fromJson(report.toJson());
+
+    expect(decoded.lastEditedStep, 4);
+    expect(decoded.lastEditedSection, 'transportation');
+  });
+
   test('valor desconhecido de sim ou não permanece unknown', () {
     final json = _completeTriage().toJson();
     final history =

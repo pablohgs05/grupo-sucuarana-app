@@ -52,6 +52,38 @@ class SearchTriage {
   final ExperienceAndResistance experienceAndResistance;
   final PreviousActions previousActions;
 
+  SearchTriage copyWith({
+    TriageMetadata? metadata,
+    PersonIdentification? person,
+    List<RelatedPerson>? relatedPeople,
+    HistoryAndDestination? historyAndDestination,
+    Transportation? transportation,
+    LastSeen? lastSeen,
+    PhysicalDescription? physicalDescription,
+    ClothingAndAccessories? clothingAndAccessories,
+    PersonalSupplies? personalSupplies,
+    HealthAndBehavior? healthAndBehavior,
+    ExperienceAndResistance? experienceAndResistance,
+    PreviousActions? previousActions,
+  }) =>
+      SearchTriage(
+        metadata: metadata ?? this.metadata,
+        person: person ?? this.person,
+        relatedPeople: relatedPeople ?? this.relatedPeople,
+        historyAndDestination:
+            historyAndDestination ?? this.historyAndDestination,
+        transportation: transportation ?? this.transportation,
+        lastSeen: lastSeen ?? this.lastSeen,
+        physicalDescription: physicalDescription ?? this.physicalDescription,
+        clothingAndAccessories:
+            clothingAndAccessories ?? this.clothingAndAccessories,
+        personalSupplies: personalSupplies ?? this.personalSupplies,
+        healthAndBehavior: healthAndBehavior ?? this.healthAndBehavior,
+        experienceAndResistance:
+            experienceAndResistance ?? this.experienceAndResistance,
+        previousActions: previousActions ?? this.previousActions,
+      );
+
   factory SearchTriage.fromLegacy({
     required String name,
     required String lastSeen,
@@ -253,6 +285,21 @@ class TriageMetadata {
   final String noticeDate;
   final String noticeTime;
 
+  TriageMetadata copyWith({
+    String? formNumber,
+    String? factDate,
+    String? factTime,
+    String? noticeDate,
+    String? noticeTime,
+  }) =>
+      TriageMetadata(
+        formNumber: formNumber ?? this.formNumber,
+        factDate: factDate ?? this.factDate,
+        factTime: factTime ?? this.factTime,
+        noticeDate: noticeDate ?? this.noticeDate,
+        noticeTime: noticeTime ?? this.noticeTime,
+      );
+
   Map<String, dynamic> toJson() => {
         'formNumber': formNumber,
         'factDate': factDate,
@@ -298,14 +345,18 @@ class PersonIdentification {
 
   PersonIdentification copyWith({
     String? name,
+    String? nickname,
+    String? address,
+    List<String>? contacts,
+    List<String>? additionalAddresses,
     String? referenceContact,
   }) =>
       PersonIdentification(
         name: name ?? this.name,
-        nickname: nickname,
-        address: address,
-        contacts: contacts,
-        additionalAddresses: additionalAddresses,
+        nickname: nickname ?? this.nickname,
+        address: address ?? this.address,
+        contacts: contacts ?? this.contacts,
+        additionalAddresses: additionalAddresses ?? this.additionalAddresses,
         referenceContact: referenceContact ?? this.referenceContact,
       );
 
@@ -344,6 +395,17 @@ class RelatedPerson {
   final String name;
   final String contact;
 
+  RelatedPerson copyWith({
+    String? relation,
+    String? name,
+    String? contact,
+  }) =>
+      RelatedPerson(
+        relation: relation ?? this.relation,
+        name: name ?? this.name,
+        contact: contact ?? this.contact,
+      );
+
   Map<String, dynamic> toJson() => {
         'relation': relation,
         'name': name,
@@ -373,6 +435,17 @@ class HistoryAndDestination {
   final String narrative;
   final AnswerState recurringMotivation;
   final String intendedDestination;
+
+  HistoryAndDestination copyWith({
+    String? narrative,
+    AnswerState? recurringMotivation,
+    String? intendedDestination,
+  }) =>
+      HistoryAndDestination(
+        narrative: narrative ?? this.narrative,
+        recurringMotivation: recurringMotivation ?? this.recurringMotivation,
+        intendedDestination: intendedDestination ?? this.intendedDestination,
+      );
 
   Map<String, dynamic> toJson() => {
         'narrative': narrative,
@@ -447,6 +520,48 @@ class Transportation {
   final AnswerState mountReturned;
   final String mountReturnDetails;
 
+  Transportation copyWith({
+    AnswerState? onFoot,
+    AnswerState? bicycle,
+    String? bicycleMakeModel,
+    String? bicycleColor,
+    String? bicycleSize,
+    AnswerState? motorVehicle,
+    String? motorVehicleType,
+    String? motorVehicleMakeModel,
+    String? motorVehicleColor,
+    String? motorVehiclePlate,
+    AnswerState? mount,
+    String? mountType,
+    String? mountColor,
+    AnswerState? vehicleOrMountFound,
+    String? vehicleOrMountFoundDetails,
+    AnswerState? mountReturned,
+    String? mountReturnDetails,
+  }) =>
+      Transportation(
+        onFoot: onFoot ?? this.onFoot,
+        bicycle: bicycle ?? this.bicycle,
+        bicycleMakeModel: bicycleMakeModel ?? this.bicycleMakeModel,
+        bicycleColor: bicycleColor ?? this.bicycleColor,
+        bicycleSize: bicycleSize ?? this.bicycleSize,
+        motorVehicle: motorVehicle ?? this.motorVehicle,
+        motorVehicleType: motorVehicleType ?? this.motorVehicleType,
+        motorVehicleMakeModel:
+            motorVehicleMakeModel ?? this.motorVehicleMakeModel,
+        motorVehicleColor: motorVehicleColor ?? this.motorVehicleColor,
+        motorVehiclePlate: motorVehiclePlate ?? this.motorVehiclePlate,
+        mount: mount ?? this.mount,
+        mountType: mountType ?? this.mountType,
+        mountColor: mountColor ?? this.mountColor,
+        vehicleOrMountFound:
+            vehicleOrMountFound ?? this.vehicleOrMountFound,
+        vehicleOrMountFoundDetails:
+            vehicleOrMountFoundDetails ?? this.vehicleOrMountFoundDetails,
+        mountReturned: mountReturned ?? this.mountReturned,
+        mountReturnDetails: mountReturnDetails ?? this.mountReturnDetails,
+      );
+
   Map<String, dynamic> toJson() => {
         'onFoot': onFoot.name,
         'bicycle': bicycle.name,
@@ -520,13 +635,22 @@ class LastSeen {
 
   String get legacySummary => notes.isNotEmpty ? notes : where;
 
-  LastSeen copyWith({String? notes}) => LastSeen(
-        when: when,
-        where: where,
-        intendedDirection: intendedDirection,
-        witnessName: witnessName,
-        witnessAddress: witnessAddress,
-        witnessContact: witnessContact,
+  LastSeen copyWith({
+    String? when,
+    String? where,
+    String? intendedDirection,
+    String? witnessName,
+    String? witnessAddress,
+    String? witnessContact,
+    String? notes,
+  }) =>
+      LastSeen(
+        when: when ?? this.when,
+        where: where ?? this.where,
+        intendedDirection: intendedDirection ?? this.intendedDirection,
+        witnessName: witnessName ?? this.witnessName,
+        witnessAddress: witnessAddress ?? this.witnessAddress,
+        witnessContact: witnessContact ?? this.witnessContact,
         notes: notes ?? this.notes,
       );
 
@@ -588,12 +712,20 @@ class PhysicalDescription {
     return values.join(' • ');
   }
 
-  PhysicalDescription copyWith({String? notes}) => PhysicalDescription(
-        age: age,
-        color: color,
-        height: height,
-        hair: hair,
-        beard: beard,
+  PhysicalDescription copyWith({
+    String? age,
+    String? color,
+    String? height,
+    String? hair,
+    AnswerState? beard,
+    String? notes,
+  }) =>
+      PhysicalDescription(
+        age: age ?? this.age,
+        color: color ?? this.color,
+        height: height ?? this.height,
+        hair: hair ?? this.hair,
+        beard: beard ?? this.beard,
         notes: notes ?? this.notes,
       );
 
@@ -639,8 +771,12 @@ class ClothingAndAccessories {
         .join(', ');
   }
 
-  ClothingAndAccessories copyWith({String? notes}) => ClothingAndAccessories(
-        items: items,
+  ClothingAndAccessories copyWith({
+    List<ClothingItem>? items,
+    String? notes,
+  }) =>
+      ClothingAndAccessories(
+        items: items ?? this.items,
         notes: notes ?? this.notes,
       );
 
@@ -678,6 +814,23 @@ class ClothingItem {
   final String size;
   final String model;
 
+  ClothingItem copyWith({
+    String? item,
+    String? type,
+    String? color,
+    String? materialOrPattern,
+    String? size,
+    String? model,
+  }) =>
+      ClothingItem(
+        item: item ?? this.item,
+        type: type ?? this.type,
+        color: color ?? this.color,
+        materialOrPattern: materialOrPattern ?? this.materialOrPattern,
+        size: size ?? this.size,
+        model: model ?? this.model,
+      );
+
   Map<String, dynamic> toJson() => {
         'item': item,
         'type': type,
@@ -703,6 +856,9 @@ class PersonalSupplies {
   static const empty = PersonalSupplies(notes: '');
 
   final String notes;
+
+  PersonalSupplies copyWith({String? notes}) =>
+      PersonalSupplies(notes: notes ?? this.notes);
 
   Map<String, dynamic> toJson() => {'notes': notes};
 
@@ -785,24 +941,50 @@ class HealthAndBehavior {
     return values.join(' • ');
   }
 
-  HealthAndBehavior copyWith({String? notes}) => HealthAndBehavior(
-        generalCondition: generalCondition,
-        physicalDisabilities: physicalDisabilities,
-        diseases: diseases,
-        psychologicalIssues: psychologicalIssues,
-        medicationUse: medicationUse,
-        medicationDetails: medicationDetails,
-        tookMedication: tookMedication,
-        lackOfMedicationConsequences: lackOfMedicationConsequences,
-        drugUse: drugUse,
-        drugDetails: drugDetails,
-        familyConflicts: familyConflicts,
-        workConflict: workConflict,
-        financialProblems: financialProblems,
-        previousSelfHarmAttempt: previousSelfHarmAttempt,
-        previousSelfHarmDetails: previousSelfHarmDetails,
-        previousSelfHarmThreat: previousSelfHarmThreat,
-        previousSelfHarmThreatDetails: previousSelfHarmThreatDetails,
+  HealthAndBehavior copyWith({
+    String? generalCondition,
+    String? physicalDisabilities,
+    String? diseases,
+    String? psychologicalIssues,
+    AnswerState? medicationUse,
+    String? medicationDetails,
+    AnswerState? tookMedication,
+    String? lackOfMedicationConsequences,
+    AnswerState? drugUse,
+    String? drugDetails,
+    AnswerState? familyConflicts,
+    AnswerState? workConflict,
+    AnswerState? financialProblems,
+    AnswerState? previousSelfHarmAttempt,
+    String? previousSelfHarmDetails,
+    AnswerState? previousSelfHarmThreat,
+    String? previousSelfHarmThreatDetails,
+    String? notes,
+  }) =>
+      HealthAndBehavior(
+        generalCondition: generalCondition ?? this.generalCondition,
+        physicalDisabilities:
+            physicalDisabilities ?? this.physicalDisabilities,
+        diseases: diseases ?? this.diseases,
+        psychologicalIssues: psychologicalIssues ?? this.psychologicalIssues,
+        medicationUse: medicationUse ?? this.medicationUse,
+        medicationDetails: medicationDetails ?? this.medicationDetails,
+        tookMedication: tookMedication ?? this.tookMedication,
+        lackOfMedicationConsequences:
+            lackOfMedicationConsequences ?? this.lackOfMedicationConsequences,
+        drugUse: drugUse ?? this.drugUse,
+        drugDetails: drugDetails ?? this.drugDetails,
+        familyConflicts: familyConflicts ?? this.familyConflicts,
+        workConflict: workConflict ?? this.workConflict,
+        financialProblems: financialProblems ?? this.financialProblems,
+        previousSelfHarmAttempt:
+            previousSelfHarmAttempt ?? this.previousSelfHarmAttempt,
+        previousSelfHarmDetails:
+            previousSelfHarmDetails ?? this.previousSelfHarmDetails,
+        previousSelfHarmThreat:
+            previousSelfHarmThreat ?? this.previousSelfHarmThreat,
+        previousSelfHarmThreatDetails:
+            previousSelfHarmThreatDetails ?? this.previousSelfHarmThreatDetails,
         notes: notes ?? this.notes,
       );
 
@@ -884,6 +1066,27 @@ class ExperienceAndResistance {
   final String previousLostDetails;
   final String physicalResistance;
   final AnswerState canSwim;
+
+  ExperienceAndResistance copyWith({
+    AnswerState? ruralWalking,
+    String? ruralWalkingDetails,
+    AnswerState? knowsArea,
+    String? knowsAreaSince,
+    AnswerState? previouslyLost,
+    String? previousLostDetails,
+    String? physicalResistance,
+    AnswerState? canSwim,
+  }) =>
+      ExperienceAndResistance(
+        ruralWalking: ruralWalking ?? this.ruralWalking,
+        ruralWalkingDetails: ruralWalkingDetails ?? this.ruralWalkingDetails,
+        knowsArea: knowsArea ?? this.knowsArea,
+        knowsAreaSince: knowsAreaSince ?? this.knowsAreaSince,
+        previouslyLost: previouslyLost ?? this.previouslyLost,
+        previousLostDetails: previousLostDetails ?? this.previousLostDetails,
+        physicalResistance: physicalResistance ?? this.physicalResistance,
+        canSwim: canSwim ?? this.canSwim,
+      );
 
   Map<String, dynamic> toJson() => {
         'ruralWalking': ruralWalking.name,

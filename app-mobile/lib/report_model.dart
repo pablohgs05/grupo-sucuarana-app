@@ -19,6 +19,7 @@ class Report {
     required this.updatedAt,
     required this.lifecycle,
     required this.lastEditedStep,
+    this.lastEditedSection,
     required this.syncStatus,
   }) : searchTriage = searchTriage == null
             ? SearchTriage.fromLegacy(
@@ -52,6 +53,7 @@ class Report {
   final DateTime updatedAt;
   final ReportLifecycle lifecycle;
   final int lastEditedStep;
+  final String? lastEditedSection;
   final SyncStatus syncStatus;
 
   String get title => identification.title;
@@ -76,6 +78,7 @@ class Report {
     DateTime? updatedAt,
     ReportLifecycle? lifecycle,
     int? lastEditedStep,
+    String? lastEditedSection,
     SyncStatus? syncStatus,
   }) =>
       Report(
@@ -91,6 +94,7 @@ class Report {
         updatedAt: updatedAt ?? this.updatedAt,
         lifecycle: lifecycle ?? this.lifecycle,
         lastEditedStep: lastEditedStep ?? this.lastEditedStep,
+        lastEditedSection: lastEditedSection ?? this.lastEditedSection,
         syncStatus: syncStatus ?? this.syncStatus,
       );
 
@@ -115,6 +119,7 @@ class Report {
         'updatedAt': updatedAt.toIso8601String(),
         'lifecycle': lifecycle.name,
         'lastEditedStep': lastEditedStep,
+        'lastEditedSection': lastEditedSection,
         'syncStatus': syncStatus.name,
       };
 
@@ -146,6 +151,7 @@ class Report {
         orElse: () => ReportLifecycle.readyForReview,
       ),
       lastEditedStep: (json['lastEditedStep'] as num?)?.toInt() ?? 0,
+      lastEditedSection: json['lastEditedSection'] as String?,
       syncStatus: SyncStatus.values.firstWhere(
         (value) => value.name == json['syncStatus'],
         orElse: () => SyncStatus.pending,
@@ -168,6 +174,7 @@ class Report {
         updatedAt: common.updatedAt,
         lifecycle: common.lifecycle,
         lastEditedStep: common.lastEditedStep,
+        lastEditedSection: common.lastEditedSection,
         syncStatus: common.syncStatus,
       );
     }
@@ -192,6 +199,7 @@ class Report {
       updatedAt: common.updatedAt,
       lifecycle: common.lifecycle,
       lastEditedStep: common.lastEditedStep,
+      lastEditedSection: common.lastEditedSection,
       syncStatus: common.syncStatus,
     );
   }
