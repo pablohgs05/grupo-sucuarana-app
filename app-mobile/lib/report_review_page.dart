@@ -210,10 +210,14 @@ class ReportReviewPage extends StatelessWidget {
             'Equipes',
             _list(
               operational.teams.map((team) {
-                final members = team.members.isEmpty
-                    ? ''
-                    : ' — ${team.members.join(', ')}';
-                return '${team.name}$members';
+                final name = team.name.trim();
+                final members = team.members
+                    .map((member) => member.trim())
+                    .where((member) => member.isNotEmpty)
+                    .join(', ');
+                if (name.isEmpty) return members;
+                if (members.isEmpty) return name;
+                return '$name — $members';
               }),
             ),
           ),
@@ -227,10 +231,11 @@ class ReportReviewPage extends StatelessWidget {
             'Recursos',
             _list(
               operational.resources.map((resource) {
-                if (resource.purpose.trim().isEmpty) {
-                  return resource.description;
-                }
-                return '${resource.description} — ${resource.purpose}';
+                final description = resource.description.trim();
+                final purpose = resource.purpose.trim();
+                if (description.isEmpty) return purpose;
+                if (purpose.isEmpty) return description;
+                return '$description — $purpose';
               }),
             ),
           ),
@@ -300,27 +305,35 @@ class ReportReviewPage extends StatelessWidget {
     return [
       _row('Saiu a pé', _answer(transport.onFoot)),
       _row('Bicicleta', _answer(transport.bicycle)),
-      _row('Bicicleta - marca/modelo', transport.bicycleMakeModel),
-      _row('Bicicleta - cor', transport.bicycleColor),
-      _row('Bicicleta - tamanho', transport.bicycleSize),
+      if (transport.bicycle == AnswerState.yes) ...[
+        _row('Bicicleta - marca/modelo', transport.bicycleMakeModel),
+        _row('Bicicleta - cor', transport.bicycleColor),
+        _row('Bicicleta - tamanho', transport.bicycleSize),
+      ],
       _row('Veículo motorizado', _answer(transport.motorVehicle)),
-      _row('Veículo - tipo', transport.motorVehicleType),
-      _row('Veículo - marca/modelo', transport.motorVehicleMakeModel),
-      _row('Veículo - cor', transport.motorVehicleColor),
-      _row('Veículo - placa', transport.motorVehiclePlate),
+      if (transport.motorVehicle == AnswerState.yes) ...[
+        _row('Veículo - tipo', transport.motorVehicleType),
+        _row('Veículo - marca/modelo', transport.motorVehicleMakeModel),
+        _row('Veículo - cor', transport.motorVehicleColor),
+        _row('Veículo - placa', transport.motorVehiclePlate),
+      ],
       _row('Montaria', _answer(transport.mount)),
-      _row('Montaria - tipo', transport.mountType),
-      _row('Montaria - cor', transport.mountColor),
+      if (transport.mount == AnswerState.yes) ...[
+        _row('Montaria - tipo', transport.mountType),
+        _row('Montaria - cor', transport.mountColor),
+      ],
       _row(
         'Veículo/montaria localizado',
         _answer(transport.vehicleOrMountFound),
       ),
-      _row(
-        'Detalhes da localização',
-        transport.vehicleOrMountFoundDetails,
-      ),
+      if (transport.vehicleOrMountFound == AnswerState.yes)
+        _row(
+          'Detalhes da localização',
+          transport.vehicleOrMountFoundDetails,
+        ),
       _row('Montaria retornou', _answer(transport.mountReturned)),
-      _row('Detalhes do retorno', transport.mountReturnDetails),
+      if (transport.mountReturned == AnswerState.yes)
+        _row('Detalhes do retorno', transport.mountReturnDetails),
     ];
   }
 
@@ -332,14 +345,17 @@ class ReportReviewPage extends StatelessWidget {
       _row('Doenças/condições', health.diseases),
       _row('Questões psicológicas/comportamentais', health.psychologicalIssues),
       _row('Uso de medicamento', _answer(health.medicationUse)),
-      _row('Medicamentos/detalhes', health.medicationDetails),
-      _row('Tomou a medicação', _answer(health.tookMedication)),
-      _row(
-        'Consequências da falta do medicamento',
-        health.lackOfMedicationConsequences,
-      ),
+      if (health.medicationUse == AnswerState.yes) ...[
+        _row('Medicamentos/detalhes', health.medicationDetails),
+        _row('Tomou a medicação', _answer(health.tookMedication)),
+        _row(
+          'Consequências da falta do medicamento',
+          health.lackOfMedicationConsequences,
+        ),
+      ],
       _row('Uso de drogas', _answer(health.drugUse)),
-      _row('Detalhes sobre uso de drogas', health.drugDetails),
+      if (health.drugUse == AnswerState.yes)
+        _row('Detalhes sobre uso de drogas', health.drugDetails),
       _row('Conflitos familiares', _answer(health.familyConflicts)),
       _row('Conflito no trabalho', _answer(health.workConflict)),
       _row('Problemas financeiros', _answer(health.financialProblems)),
@@ -347,12 +363,14 @@ class ReportReviewPage extends StatelessWidget {
         'Tentativa anterior de autoagressão',
         _answer(health.previousSelfHarmAttempt),
       ),
-      _row('Detalhes da tentativa', health.previousSelfHarmDetails),
+      if (health.previousSelfHarmAttempt == AnswerState.yes)
+        _row('Detalhes da tentativa', health.previousSelfHarmDetails),
       _row(
         'Ameaça anterior de autoagressão',
         _answer(health.previousSelfHarmThreat),
       ),
-      _row('Detalhes da ameaça', health.previousSelfHarmThreatDetails),
+      if (health.previousSelfHarmThreat == AnswerState.yes)
+        _row('Detalhes da ameaça', health.previousSelfHarmThreatDetails),
       _row('Outras observações', health.notes),
     ];
   }
@@ -364,11 +382,14 @@ class ReportReviewPage extends StatelessWidget {
         'Experiência em caminhada/área rural',
         _answer(experience.ruralWalking),
       ),
-      _row('Detalhes da experiência', experience.ruralWalkingDetails),
+      if (experience.ruralWalking == AnswerState.yes)
+        _row('Detalhes da experiência', experience.ruralWalkingDetails),
       _row('Conhece a área', _answer(experience.knowsArea)),
-      _row('Desde quando/nível de conhecimento', experience.knowsAreaSince),
+      if (experience.knowsArea == AnswerState.yes)
+        _row('Desde quando/nível de conhecimento', experience.knowsAreaSince),
       _row('Já se perdeu anteriormente', _answer(experience.previouslyLost)),
-      _row('Detalhes da ocorrência anterior', experience.previousLostDetails),
+      if (experience.previouslyLost == AnswerState.yes)
+        _row('Detalhes da ocorrência anterior', experience.previousLostDetails),
       _row('Resistência/condicionamento', experience.physicalResistance),
       _row('Sabe nadar', _answer(experience.canSwim)),
     ];
