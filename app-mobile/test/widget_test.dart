@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:grupo_sucuarana_app/main.dart';
 import 'package:grupo_sucuarana_app/report_model.dart';
 import 'package:grupo_sucuarana_app/report_store.dart';
+import 'package:grupo_sucuarana_app/search_triage.dart';
 
 void main() {
   testWidgets('exibe a tela inicial após carregar relatórios', (tester) async {
@@ -125,11 +126,36 @@ void main() {
     expect(find.text('Salvo no dispositivo'), findsOneWidget);
   });
 
-  testWidgets('restaura a etapa salva de um rascunho', (tester) async {
+  testWidgets('restaura a seção estável salva de um rascunho', (tester) async {
     final repository = _FakeReportRepository();
     final report = _fakeReport(
       id: 'draft-001',
       title: 'Rascunho recuperado',
+      updatedAt: DateTime.utc(2026, 10, 1, 15),
+      lifecycle: ReportLifecycle.draft,
+      lastEditedStep: 0,
+      lastEditedSection: 'healthAndBehavior',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(
+          report: report,
+          reportRepository: repository,
+        ),
+      ),
+    );
+
+    expect(find.text('Saúde e comportamento'), findsOneWidget);
+    expect(find.text('Etapa 9 de 14'), findsOneWidget);
+    expect(find.text('Salvo no dispositivo'), findsOneWidget);
+  });
+
+  testWidgets('mapeia posição legada para a nova seção', (tester) async {
+    final repository = _FakeReportRepository();
+    final report = _fakeReport(
+      id: 'legacy-draft-001',
+      title: 'Rascunho legado fictício',
       updatedAt: DateTime.utc(2026, 10, 1, 15),
       lifecycle: ReportLifecycle.draft,
       lastEditedStep: 3,
@@ -144,9 +170,90 @@ void main() {
       ),
     );
 
-    final stepper = tester.widget<Stepper>(find.byType(Stepper));
-    expect(stepper.currentStep, 3);
-    expect(find.text('Salvo no dispositivo'), findsOneWidget);
+    expect(find.text('Descrição física'), findsOneWidget);
+    expect(find.text('Etapa 7 de 14'), findsOneWidget);
+  });
+
+  testWidgets('autosave persiste campo estruturado da triagem', (tester) async {
+    final repository = _FakeReportRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(reportRepository: repository),
+      ),
+    );
+
+    await tester.tap(find.text('Próximo'));
+    await tester.pump();
+
+    expect(find.text('Dados do formulário'), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Número do formulário'),
+      'FORM-FICTICIO-001',
+    );
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pump();
+
+    expect(repository.upserts, isNotEmpty);
+    expect(
+      repository.upserts.last.searchTriage.metadata.formNumber,
+      'FORM-FICTICIO-001',
+    );
+    expect(repository.upserts.last.lifecycle, ReportLifecycle.draft);
+  });
+
+  testWidgets('campo condicional preserva conteúdo ao ocultar e reexibir',
+      (tester) async {
+    final repository = _FakeReportRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(reportRepository: repository),
+      ),
+    );
+
+    for (var index = 0; index < 4; index++) {
+      await tester.tap(find.text('Próximo'));
+      await tester.pump();
+    }
+
+    expect(find.text('Transporte'), findsOneWidget);
+    expect(find.text('Bicicleta - marca/modelo'), findsNothing);
+
+    Finder bicycleSelector() => find.byWidgetPredicate(
+          (widget) =>
+              widget is DropdownButtonFormField<AnswerState> &&
+              widget.decoration.labelText == 'Utilizou bicicleta?',
+        );
+
+    var selector =
+        tester.widget<DropdownButtonFormField<AnswerState>>(bicycleSelector());
+    selector.onChanged!(AnswerState.yes);
+    await tester.pump();
+
+    expect(find.text('Bicicleta - marca/modelo'), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Bicicleta - marca/modelo'),
+      'Modelo fictício',
+    );
+
+    selector =
+        tester.widget<DropdownButtonFormField<AnswerState>>(bicycleSelector());
+    selector.onChanged!(AnswerState.no);
+    await tester.pump();
+    expect(find.text('Bicicleta - marca/modelo'), findsNothing);
+
+    selector =
+        tester.widget<DropdownButtonFormField<AnswerState>>(bicycleSelector());
+    selector.onChanged!(AnswerState.yes);
+    await tester.pump();
+
+    final restored = tester.widget<TextFormField>(
+      find.widgetWithText(TextFormField, 'Bicicleta - marca/modelo'),
+    );
+    expect(restored.controller?.text ?? restored.initialValue, 'Modelo fictício');
   });
 }
 
@@ -187,6 +294,7 @@ Report _fakeReport({
   required DateTime updatedAt,
   ReportLifecycle lifecycle = ReportLifecycle.readyForReview,
   int lastEditedStep = 0,
+  String? lastEditedSection,
 }) {
   return Report(
     id: id,
@@ -217,6 +325,7 @@ Report _fakeReport({
     updatedAt: updatedAt,
     lifecycle: lifecycle,
     lastEditedStep: lastEditedStep,
+    lastEditedSection: lastEditedSection,
     syncStatus: SyncStatus.pending,
   );
 }
