@@ -360,7 +360,10 @@ void main() {
     await tester.scrollUntilVisible(
       confirm,
       700,
-      scrollable: find.byType(Scrollable),
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('report-review-list')),
+        matching: find.byType(Scrollable),
+      ),
     );
     await tester.tap(confirm);
     await tester.pumpAndSettle();
@@ -401,7 +404,10 @@ void main() {
     await tester.scrollUntilVisible(
       editOperation,
       500,
-      scrollable: find.byType(Scrollable),
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('report-review-list')),
+        matching: find.byType(Scrollable),
+      ),
     );
     await tester.tap(editOperation);
     await tester.pumpAndSettle();
