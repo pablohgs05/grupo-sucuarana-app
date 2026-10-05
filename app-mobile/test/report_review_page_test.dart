@@ -16,8 +16,40 @@ void main() {
     );
 
     expect(find.text('Revisar relatório'), findsOneWidget);
+
+    final reviewScroll = find.descendant(
+      of: find.byKey(const ValueKey('report-review-list')),
+      matching: find.byType(Scrollable),
+    );
+
+    final personSection = find.byKey(
+      const ValueKey('review-section-person'),
+    );
+    await tester.scrollUntilVisible(
+      personSection,
+      300,
+      scrollable: reviewScroll,
+    );
     expect(find.text('Pessoa fictícia de revisão'), findsOneWidget);
+
+    final transportSection = find.byKey(
+      const ValueKey('review-section-transportation'),
+    );
+    await tester.scrollUntilVisible(
+      transportSection,
+      300,
+      scrollable: reviewScroll,
+    );
     expect(find.text('Bicicleta fictícia'), findsOneWidget);
+
+    final healthSection = find.byKey(
+      const ValueKey('review-section-healthAndBehavior'),
+    );
+    await tester.scrollUntilVisible(
+      healthSection,
+      400,
+      scrollable: reviewScroll,
+    );
     expect(find.text('Detalhe oculto antigo'), findsNothing);
 
     final attachmentsSection = find.byKey(
@@ -25,8 +57,8 @@ void main() {
     );
     await tester.scrollUntilVisible(
       attachmentsSection,
-      500,
-      scrollable: find.byType(Scrollable),
+      600,
+      scrollable: reviewScroll,
     );
 
     expect(
@@ -70,7 +102,10 @@ void main() {
     await tester.scrollUntilVisible(
       editPerson,
       250,
-      scrollable: find.byType(Scrollable),
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('report-review-list')),
+        matching: find.byType(Scrollable),
+      ),
     );
     await tester.tap(editPerson);
     await tester.pumpAndSettle();
@@ -114,7 +149,10 @@ void main() {
     await tester.scrollUntilVisible(
       confirm,
       700,
-      scrollable: find.byType(Scrollable),
+      scrollable: find.descendant(
+        of: find.byKey(const ValueKey('report-review-list')),
+        matching: find.byType(Scrollable),
+      ),
     );
     await tester.tap(confirm);
     await tester.pumpAndSettle();
