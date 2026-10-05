@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:grupo_sucuarana_app/operational_report.dart';
 import 'package:grupo_sucuarana_app/main.dart';
 import 'package:grupo_sucuarana_app/report_model.dart';
 import 'package:grupo_sucuarana_app/report_store.dart';
@@ -147,7 +148,7 @@ void main() {
     );
 
     expect(find.text('Saúde e comportamento'), findsOneWidget);
-    expect(find.text('Etapa 9 de 14'), findsOneWidget);
+    expect(find.text('Etapa 9 de 17'), findsOneWidget);
     expect(find.text('Salvo no dispositivo'), findsOneWidget);
   });
 
@@ -171,7 +172,7 @@ void main() {
     );
 
     expect(find.text('Descrição física'), findsOneWidget);
-    expect(find.text('Etapa 7 de 14'), findsOneWidget);
+    expect(find.text('Etapa 7 de 17'), findsOneWidget);
   });
 
   testWidgets('autosave persiste campo estruturado da triagem', (tester) async {
@@ -199,6 +200,45 @@ void main() {
     expect(
       repository.upserts.last.searchTriage.metadata.formNumber,
       'FORM-FICTICIO-001',
+    );
+    expect(repository.upserts.last.lifecycle, ReportLifecycle.draft);
+  });
+
+  testWidgets('autosave persiste narrativa operacional estruturada',
+      (tester) async {
+    final repository = _FakeReportRepository();
+    final report = _fakeReport(
+      id: 'operational-draft-001',
+      title: 'Rascunho operacional fictício',
+      updatedAt: DateTime.utc(2026, 10, 5, 12),
+      lifecycle: ReportLifecycle.draft,
+      lastEditedSection: 'occurrenceNarrative',
+      operationalContent: OperationalReportContent.empty,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(
+          report: report,
+          reportRepository: repository,
+        ),
+      ),
+    );
+
+    expect(find.text('Descrição da ocorrência'), findsOneWidget);
+    expect(find.text('Etapa 13 de 17'), findsOneWidget);
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Descrição da ocorrência'),
+      'Narrativa operacional fictícia.',
+    );
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pump();
+
+    expect(repository.upserts, isNotEmpty);
+    expect(
+      repository.upserts.last.operationalContent.occurrenceNarrative,
+      'Narrativa operacional fictícia.',
     );
     expect(repository.upserts.last.lifecycle, ReportLifecycle.draft);
   });
@@ -298,6 +338,7 @@ Report _fakeReport({
   ReportLifecycle lifecycle = ReportLifecycle.readyForReview,
   int lastEditedStep = 0,
   String? lastEditedSection,
+  OperationalReportContent? operationalContent,
 }) {
   return Report(
     id: id,
@@ -316,6 +357,7 @@ Report _fakeReport({
       start: '08:00',
       end: '12:00',
     ),
+    operationalContent: operationalContent,
     physicalDescription: 'Descrição fictícia.',
     clothing: 'Vestimenta fictícia.',
     health: 'Sem dados reais.',
