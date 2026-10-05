@@ -357,13 +357,10 @@ void main() {
     );
 
     final confirm = find.byKey(const ValueKey('confirm-review'));
-    await tester.scrollUntilVisible(
+    await tester.dragUntilVisible(
       confirm,
-      700,
-      scrollable: find.descendant(
-        of: find.byKey(const ValueKey('report-review-list')),
-        matching: find.byType(Scrollable),
-      ),
+      find.byKey(const ValueKey('report-review-list')),
+      const Offset(0, -700),
     );
     await tester.tap(confirm);
     await tester.pumpAndSettle();
@@ -401,13 +398,10 @@ void main() {
     await tester.pumpAndSettle();
 
     final editOperation = find.byKey(const ValueKey('edit-operation'));
-    await tester.scrollUntilVisible(
+    await tester.dragUntilVisible(
       editOperation,
-      500,
-      scrollable: find.descendant(
-        of: find.byKey(const ValueKey('report-review-list')),
-        matching: find.byType(Scrollable),
-      ),
+      find.byKey(const ValueKey('report-review-list')),
+      const Offset(0, -500),
     );
     await tester.tap(editOperation);
     await tester.pumpAndSettle();
