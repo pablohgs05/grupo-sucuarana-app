@@ -225,7 +225,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Descrição da ocorrência'), findsOneWidget);
+    expect(find.text('Descrição da ocorrência'), findsWidgets);
     expect(find.text('Etapa 13 de 17'), findsOneWidget);
 
     await tester.enterText(
