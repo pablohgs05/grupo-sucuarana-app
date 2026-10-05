@@ -240,6 +240,7 @@ void main() {
       find.widgetWithText(TextFormField, 'Bicicleta - marca/modelo'),
       'Modelo fictício',
     );
+    await tester.pump();
 
     selector =
         tester.widget<DropdownButtonFormField<AnswerState>>(bicycleSelector());
