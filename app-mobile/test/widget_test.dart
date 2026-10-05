@@ -92,6 +92,40 @@ void main() {
     expect(reports.first.id, 'older');
   });
 
+  testWidgets('home oferece preview para relatório revisado, não para rascunho',
+      (tester) async {
+    final repository = _FakeReportRepository();
+    final ready = _fakeReport(
+      id: 'ready-home',
+      title: 'Relatório revisado fictício',
+      updatedAt: DateTime.utc(2026, 10, 5, 16),
+      lifecycle: ReportLifecycle.readyForReview,
+    );
+    final draft = _fakeReport(
+      id: 'draft-home',
+      title: 'Rascunho fictício',
+      updatedAt: DateTime.utc(2026, 10, 5, 15),
+      lifecycle: ReportLifecycle.draft,
+    );
+
+    await tester.pumpWidget(
+      GrupoSucuaranaApp(reportRepository: repository),
+    );
+
+    repository.completeNext(<Report>[ready, draft]);
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      find.byKey(const ValueKey('preview-report-ready-home')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const ValueKey('preview-report-draft-home')),
+      findsNothing,
+    );
+  });
+
   testWidgets('navega pelo formulário estruturado', (tester) async {
     final repository = _FakeReportRepository();
 
@@ -153,6 +187,7 @@ void main() {
     expect(find.text('Saúde e comportamento'), findsOneWidget);
     expect(find.text('Etapa 9 de 17'), findsOneWidget);
     expect(find.text('Salvo no dispositivo'), findsOneWidget);
+    expect(find.byTooltip('Visualizar PDF'), findsOneWidget);
   });
 
   testWidgets('mapeia posição legada para a nova seção', (tester) async {
