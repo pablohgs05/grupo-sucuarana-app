@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:grupo_sucuarana_app/operational_report.dart';
 import 'package:grupo_sucuarana_app/report_model.dart';
 import 'package:grupo_sucuarana_app/search_triage.dart';
 
@@ -63,6 +64,68 @@ void main() {
       'Procedimentos fictícios',
     );
     expect(report.toJson()['searchTriage'], isA<Map<String, dynamic>>());
+  });
+
+  test('migra conteúdo operacional legado sem perda', () {
+    final report = Report.fromJson({
+      'id': 'legacy-operational-report',
+      'identification': {
+        'title': 'Relatório operacional legado fictício',
+        'date': DateTime.utc(2026, 10, 2).toIso8601String(),
+        'coordinator': 'Equipe fictícia',
+      },
+      'missing': {
+        'name': 'Pessoa fictícia',
+        'lastSeen': '',
+        'contact': '',
+      },
+      'operation': {
+        'location': 'Local fictício',
+        'start': '08:00',
+        'end': '12:00',
+      },
+      'teams': <String>['Equipe legado fictícia'],
+      'resources': <String>['Recurso legado fictício'],
+      'conclusion': 'Conclusão legada fictícia.',
+      'attachments': <String>[],
+      'updatedAt': DateTime.utc(2026, 10, 2, 12).toIso8601String(),
+      'syncStatus': 'pending',
+    });
+
+    expect(report.operationalContent.teams.single.name,
+        'Equipe legado fictícia');
+    expect(report.operationalContent.resources.single.description,
+        'Recurso legado fictício');
+    expect(
+      report.operationalContent.conclusion,
+      'Conclusão legada fictícia.',
+    );
+    expect(report.toJson()['operationalContent'],
+        isA<Map<String, dynamic>>());
+  });
+
+  test('preserva conteúdo operacional estruturado no round-trip JSON', () {
+    final report = _report(
+      searchTriage: _completeTriage(),
+      operationalContent: _completeOperationalContent(),
+    );
+
+    final decoded = Report.fromJson(report.toJson());
+
+    expect(decoded.toJson(), report.toJson());
+    expect(
+      decoded.operationalContent.generalInformation.externalReference,
+      'REF-FICTICIA-001',
+    );
+    expect(
+      decoded.operationalContent.occurrenceNarrative,
+      'Descrição de ocorrência fictícia.',
+    );
+    expect(decoded.operationalContent.teams.single.members, hasLength(2));
+    expect(
+      decoded.operationalContent.resources.single.purpose,
+      'Finalidade fictícia.',
+    );
   });
 
   test('preserva o formulário de triagem completo no round-trip JSON', () {
@@ -173,7 +236,11 @@ void main() {
   });
 }
 
-Report _report({SearchTriage? searchTriage}) => Report(
+Report _report({
+  SearchTriage? searchTriage,
+  OperationalReportContent? operationalContent,
+}) =>
+    Report(
       id: 'report-m3-ficticio',
       identification: Identification(
         title: 'Relatório fictício M3',
@@ -186,6 +253,7 @@ Report _report({SearchTriage? searchTriage}) => Report(
         start: '08:00',
         end: '12:00',
       ),
+      operationalContent: operationalContent,
       teams: const <String>['Equipe fictícia A'],
       resources: const <String>['Recurso fictício'],
       conclusion: 'Conclusão fictícia.',
@@ -195,6 +263,32 @@ Report _report({SearchTriage? searchTriage}) => Report(
       lifecycle: ReportLifecycle.draft,
       lastEditedStep: 2,
       syncStatus: SyncStatus.pending,
+    );
+
+OperationalReportContent _completeOperationalContent() =>
+    const OperationalReportContent(
+      generalInformation: OperationalGeneralInformation(
+        externalReference: 'REF-FICTICIA-001',
+        documentRg: 'RG-FICTICIO',
+        documentCpf: 'CPF-FICTICIO',
+        phone: 'TELEFONE-FICTICIO',
+        contactMadeBy: 'Contato institucional fictício',
+      ),
+      occurrenceNarrative: 'Descrição de ocorrência fictícia.',
+      developmentNarrative: 'Desenvolvimento operacional fictício.',
+      teams: <OperationalTeam>[
+        OperationalTeam(
+          name: 'Equipe fictícia',
+          members: <String>['Integrante A', 'Integrante B'],
+        ),
+      ],
+      resources: <OperationalResource>[
+        OperationalResource(
+          description: 'Recurso fictício',
+          purpose: 'Finalidade fictícia.',
+        ),
+      ],
+      conclusion: 'Conclusão operacional fictícia.',
     );
 
 SearchTriage _completeTriage() => const SearchTriage(
