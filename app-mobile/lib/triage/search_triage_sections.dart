@@ -1002,7 +1002,8 @@ class _EditableStringListState extends State<EditableStringList> {
                         onPressed: () {
                           final removed = _controllers.removeAt(entry.key);
                           removed.dispose();
-                          setState(_emit);
+                          setState(() {});
+                          _emit();
                         },
                         icon: const Icon(Icons.delete_outline),
                       ),
@@ -1104,7 +1105,8 @@ class _RelatedPeopleEditorState extends State<RelatedPeopleEditor> {
                             onPressed: () {
                               final removed = _items.removeAt(entry.key);
                               removed.dispose();
-                              setState(_emit);
+                              setState(() {});
+                          _emit();
                             },
                             icon: const Icon(Icons.delete_outline),
                             label: const Text('Remover'),
@@ -1234,7 +1236,8 @@ class _ClothingItemsEditorState extends State<ClothingItemsEditor> {
                             onPressed: () {
                               final removed = _items.removeAt(entry.key);
                               removed.dispose();
-                              setState(_emit);
+                              setState(() {});
+                          _emit();
                             },
                             icon: const Icon(Icons.delete_outline),
                             label: const Text('Remover'),
