@@ -301,7 +301,9 @@ void main() {
       'Legenda fictícia do anexo A',
     );
 
-    await tester.tap(find.byTooltip('Mover para baixo').first);
+    final moveDown = find.byTooltip('Mover para baixo').first;
+    await tester.ensureVisible(moveDown);
+    await tester.tap(moveDown);
     await tester.pump(const Duration(milliseconds: 750));
     await tester.pump();
 
@@ -310,7 +312,9 @@ void main() {
       <String>['att-b', 'att-a'],
     );
 
-    await tester.tap(find.byTooltip('Remover anexo').first);
+    final remove = find.byTooltip('Remover anexo').first;
+    await tester.ensureVisible(remove);
+    await tester.tap(remove);
     await tester.pump();
     await tester.pump();
 
