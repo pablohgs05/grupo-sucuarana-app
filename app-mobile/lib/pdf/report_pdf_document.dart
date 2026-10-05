@@ -279,7 +279,7 @@ pw.Widget _institutionalHeader(ReportPdfPlan plan) => pw.Column(
         ),
         pw.SizedBox(height: 2),
         pw.Text(
-          '“${plan.branding.tagline}”',
+          '"${plan.branding.tagline}"',
           textAlign: pw.TextAlign.center,
           style: pw.TextStyle(
             fontSize: 8,
