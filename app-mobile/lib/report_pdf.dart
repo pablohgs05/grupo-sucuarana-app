@@ -1,6 +1,7 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'report_attachment.dart';
 import 'report_model.dart';
 
 Future<void> exportReportPdf(Report report) async {
@@ -64,9 +65,9 @@ String _date(DateTime value) =>
     '${value.day.toString().padLeft(2, '0')}/${value.month.toString().padLeft(2, '0')}/${value.year}';
 
 
-String _attachmentLabel(dynamic attachment) {
-  final name = attachment.originalName as String;
-  final caption = attachment.caption as String;
+String _attachmentLabel(ReportAttachment attachment) {
+  final name = attachment.originalName;
+  final caption = attachment.caption;
   if (caption.trim().isEmpty) return name;
   return '$name — ${caption.trim()}';
 }
