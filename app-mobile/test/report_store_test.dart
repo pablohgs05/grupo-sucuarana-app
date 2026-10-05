@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:grupo_sucuarana_app/operational_report.dart';
 import 'package:grupo_sucuarana_app/report_model.dart';
 import 'package:grupo_sucuarana_app/report_store.dart';
 import 'package:grupo_sucuarana_app/search_triage.dart';
@@ -101,6 +102,60 @@ void main() {
     );
   });
 
+  test('persists structured operational content after reopening',
+      () async {
+    final report = _fakeReport(
+      operationalContent: const OperationalReportContent(
+        generalInformation: OperationalGeneralInformation(
+          externalReference: 'REF-DB-FICTICIA',
+          documentRg: '',
+          documentCpf: '',
+          phone: '',
+          contactMadeBy: 'Contato fictício',
+        ),
+        occurrenceNarrative: 'Ocorrência fictícia.',
+        developmentNarrative: 'Desenvolvimento fictício.',
+        teams: <OperationalTeam>[
+          OperationalTeam(
+            name: 'Equipe fictícia',
+            members: <String>['Integrante fictício'],
+          ),
+        ],
+        resources: <OperationalResource>[
+          OperationalResource(
+            description: 'Recurso fictício',
+            purpose: 'Finalidade fictícia',
+          ),
+        ],
+        conclusion: 'Conclusão fictícia.',
+      ),
+    );
+
+    final firstStore = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    await firstStore.upsert(report);
+    await firstStore.close();
+
+    final reopenedStore = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    final loaded = await reopenedStore.load();
+    await reopenedStore.close();
+
+    expect(
+      loaded.single.operationalContent.generalInformation.externalReference,
+      'REF-DB-FICTICIA',
+    );
+    expect(
+      loaded.single.operationalContent.developmentNarrative,
+      'Desenvolvimento fictício.',
+    );
+    expect(loaded.single.operationalContent.teams.single.members, hasLength(1));
+  });
+
   test('upsert updates one report without deleting the others', () async {
     final first = _fakeReport(id: 'report-001', title: 'Primeiro');
     final second = _fakeReport(id: 'report-002', title: 'Segundo');
@@ -170,6 +225,7 @@ Report _fakeReport({
   ReportLifecycle lifecycle = ReportLifecycle.readyForReview,
   int lastEditedStep = 0,
   SearchTriage? searchTriage,
+  OperationalReportContent? operationalContent,
 }) {
   final timestamp = updatedAt ?? DateTime.utc(2026, 10, 1, 12, 30);
   return Report(
@@ -190,6 +246,7 @@ Report _fakeReport({
       start: '08:00',
       end: '12:00',
     ),
+    operationalContent: operationalContent,
     physicalDescription: 'Descrição fictícia.',
     clothing: 'Vestimenta fictícia.',
     health: 'Sem dados reais.',

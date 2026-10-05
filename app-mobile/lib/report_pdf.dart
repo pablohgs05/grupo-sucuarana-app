@@ -11,22 +11,30 @@ Future<void> exportReportPdf(Report report) async {
       'Data: ${_date(report.identification.date)}',
       'Coordenação: ${report.identification.coordinator}',
     ],
-    'Desaparecido': [
+    'Informações gerais': [
       'Nome/referência: ${report.missing.name}',
-      'Último avistamento: ${report.missing.lastSeen}',
-      'Contato de referência: ${report.missing.contact}',
+      'Endereço: ${report.searchTriage.person.address}',
+      'RG: ${report.operationalContent.generalInformation.documentRg}',
+      'CPF: ${report.operationalContent.generalInformation.documentCpf}',
+      'Telefone: ${report.operationalContent.generalInformation.phone}',
+      'Contato feito por: '
+          '${report.operationalContent.generalInformation.contactMadeBy}',
+      'Referência externa: '
+          '${report.operationalContent.generalInformation.externalReference}',
+    ],
+    'Descrição da ocorrência': [
+      report.operationalContent.occurrenceNarrative,
     ],
     'Operação': [
       'Local: ${report.operation.location}',
       'Início: ${report.operation.start}',
       'Término: ${report.operation.end}',
     ],
-    'Descrição física': [report.physicalDescription],
-    'Vestimentas': [report.clothing],
-    'Saúde': [report.health],
-    'Procedimentos': [report.procedures],
-    'Equipes': [report.teams.join(', ')],
-    'Recursos': [report.resources.join(', ')],
+    'Desenvolvimento do emprego da equipe': [
+      report.operationalContent.developmentNarrative,
+    ],
+    'Equipes': [report.teams.join('\n')],
+    'Recursos utilizados': [report.resources.join('\n')],
     'Conclusão': [report.conclusion],
     'Anexos': [report.attachments.isEmpty ? 'Nenhum anexo' : report.attachments.join('\n')],
   };

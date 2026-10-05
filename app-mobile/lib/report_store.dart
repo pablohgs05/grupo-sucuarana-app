@@ -23,7 +23,7 @@ class ReportStore implements ReportRepository {
 
   static const _databaseName = 'grupo_sucuarana.db';
   static const _databaseVersion = 1;
-  static const _reportSchemaVersion = 2;
+  static const _reportSchemaVersion = 3;
   static const _table = 'reports';
 
   // Kept only to migrate installations created before SQLite became

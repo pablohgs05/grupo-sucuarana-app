@@ -1,3 +1,4 @@
+import 'operational_report.dart';
 import 'search_triage.dart';
 
 class Report {
@@ -7,13 +8,14 @@ class Report {
     SearchTriage? searchTriage,
     MissingPerson? missing,
     required this.operation,
+    OperationalReportContent? operationalContent,
     String? physicalDescription,
     String? clothing,
     String? health,
     String? procedures,
-    required this.teams,
-    required this.resources,
-    required this.conclusion,
+    List<String>? teams,
+    List<String>? resources,
+    String? conclusion,
     required this.attachments,
     required this.createdAt,
     required this.updatedAt,
@@ -39,15 +41,19 @@ class Report {
                 clothing: clothing,
                 health: health,
                 procedures: procedures,
-              );
+              ),
+        operationalContent = operationalContent ??
+            OperationalReportContent.fromLegacy(
+              teams: teams ?? const <String>[],
+              resources: resources ?? const <String>[],
+              conclusion: conclusion ?? '',
+            );
 
   final String id;
   final Identification identification;
   final SearchTriage searchTriage;
   final Operation operation;
-  final List<String> teams;
-  final List<String> resources;
-  final String conclusion;
+  final OperationalReportContent operationalContent;
   final List<String> attachments;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -58,6 +64,13 @@ class Report {
 
   String get title => identification.title;
   String get location => operation.location;
+  List<String> get teams => operationalContent.teams
+      .map((team) => team.legacySummary)
+      .toList(growable: false);
+  List<String> get resources => operationalContent.resources
+      .map((resource) => resource.legacySummary)
+      .toList(growable: false);
+  String get conclusion => operationalContent.conclusion;
 
   // Temporary compatibility accessors until M4 migrates the form UI to the
   // structured triage fields. SearchTriage remains the single source of truth.
@@ -74,6 +87,7 @@ class Report {
   String get procedures => searchTriage.previousActions.description;
 
   Report copyWith({
+    OperationalReportContent? operationalContent,
     DateTime? createdAt,
     DateTime? updatedAt,
     ReportLifecycle? lifecycle,
@@ -86,9 +100,7 @@ class Report {
         identification: identification,
         searchTriage: searchTriage,
         operation: operation,
-        teams: teams,
-        resources: resources,
-        conclusion: conclusion,
+        operationalContent: operationalContent ?? this.operationalContent,
         attachments: attachments,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
@@ -103,6 +115,7 @@ class Report {
         'identification': identification.toJson(),
         'searchTriage': searchTriage.toJson(),
         'operation': operation.toJson(),
+        'operationalContent': operationalContent.toJson(),
 
         // Transitional mirrors are derived from SearchTriage so older
         // consumers can keep reading the payload during the M3 -> M4 bridge.
@@ -128,6 +141,18 @@ class Report {
     final createdAtValue = json['createdAt'] as String?;
     final lifecycleValue = json['lifecycle'] as String?;
     final searchTriageValue = json['searchTriage'];
+    final operationalContentValue = json['operationalContent'];
+
+    final operationalContent = operationalContentValue is Map
+        ? OperationalReportContent.fromJson(
+            Map<String, dynamic>.from(operationalContentValue),
+          )
+        : OperationalReportContent.fromLegacy(
+            teams: List<String>.from(json['teams'] as List? ?? const []),
+            resources:
+                List<String>.from(json['resources'] as List? ?? const []),
+            conclusion: json['conclusion'] as String? ?? '',
+          );
 
     final common = (
       id: json['id'] as String,
@@ -137,9 +162,7 @@ class Report {
       operation: Operation.fromJson(
         Map<String, dynamic>.from(json['operation'] as Map),
       ),
-      teams: List<String>.from(json['teams'] as List? ?? const []),
-      resources: List<String>.from(json['resources'] as List? ?? const []),
-      conclusion: json['conclusion'] as String? ?? '',
+      operationalContent: operationalContent,
       attachments:
           List<String>.from(json['attachments'] as List? ?? const []),
       createdAt: createdAtValue == null
@@ -166,9 +189,7 @@ class Report {
           Map<String, dynamic>.from(searchTriageValue),
         ),
         operation: common.operation,
-        teams: common.teams,
-        resources: common.resources,
-        conclusion: common.conclusion,
+        operationalContent: common.operationalContent,
         attachments: common.attachments,
         createdAt: common.createdAt,
         updatedAt: common.updatedAt,
@@ -187,13 +208,11 @@ class Report {
           ? MissingPerson.fromJson(Map<String, dynamic>.from(missingValue))
           : MissingPerson.empty,
       operation: common.operation,
+      operationalContent: common.operationalContent,
       physicalDescription: json['physicalDescription'] as String? ?? '',
       clothing: json['clothing'] as String? ?? '',
       health: json['health'] as String? ?? '',
       procedures: json['procedures'] as String? ?? '',
-      teams: common.teams,
-      resources: common.resources,
-      conclusion: common.conclusion,
       attachments: common.attachments,
       createdAt: common.createdAt,
       updatedAt: common.updatedAt,

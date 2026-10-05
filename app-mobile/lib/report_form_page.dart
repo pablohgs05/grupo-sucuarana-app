@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+import 'operational_report.dart';
+import 'operational/operational_sections.dart';
 import 'report_model.dart';
 import 'report_pdf.dart';
 import 'report_store.dart';
@@ -81,15 +83,41 @@ class _ReportFormPageState extends State<ReportFormPage>
       'Procedimentos anteriores',
       SearchTriageSection.previousActions,
     ),
+    _FormSection(
+      'generalInformation',
+      'Informações gerais do relatório',
+      null,
+      OperationalSection.generalInformation,
+    ),
+    _FormSection(
+      'occurrenceNarrative',
+      'Descrição da ocorrência',
+      null,
+      OperationalSection.occurrenceNarrative,
+    ),
     _FormSection('operation', 'Operação'),
-    _FormSection('teamsAndResources', 'Equipes e recursos'),
-    _FormSection('conclusionAndAttachments', 'Conclusão e anexos'),
+    _FormSection(
+      'teamsAndResources',
+      'Desenvolvimento e equipes',
+      null,
+      OperationalSection.developmentAndTeams,
+    ),
+    _FormSection(
+      'resources',
+      'Recursos utilizados',
+      null,
+      OperationalSection.resources,
+    ),
+    _FormSection(
+      'conclusionAndAttachments',
+      'Conclusão e anexos',
+      null,
+      OperationalSection.conclusion,
+    ),
   ];
 
   final _picker = ImagePicker();
   final _controllers = <String, TextEditingController>{};
-  final _teams = <TextEditingController>[];
-  final _resources = <TextEditingController>[];
   final _attachments = <String>[];
 
   late final ReportRepository _store;
@@ -97,6 +125,7 @@ class _ReportFormPageState extends State<ReportFormPage>
   late final DateTime _createdAt;
   late DateTime _date;
   late SearchTriage _searchTriage;
+  late OperationalReportContent _operationalContent;
   late ReportLifecycle _lifecycle;
   late SyncStatus _syncStatus;
 
@@ -115,7 +144,6 @@ class _ReportFormPageState extends State<ReportFormPage>
     'location': 'Local da operação',
     'start': 'Início',
     'end': 'Término',
-    'conclusion': 'Conclusão e próximos passos',
   };
 
   @override
@@ -129,6 +157,8 @@ class _ReportFormPageState extends State<ReportFormPage>
     _createdAt = report?.createdAt ?? DateTime.now();
     _date = report?.identification.date ?? DateTime.now();
     _searchTriage = report?.searchTriage ?? SearchTriage.empty;
+    _operationalContent =
+        report?.operationalContent ?? OperationalReportContent.empty;
     _lifecycle = report?.lifecycle ?? ReportLifecycle.draft;
     _syncStatus = report?.syncStatus ?? SyncStatus.pending;
     _hasSaved = report != null;
@@ -140,17 +170,10 @@ class _ReportFormPageState extends State<ReportFormPage>
       'location': report?.operation.location,
       'start': report?.operation.start,
       'end': report?.operation.end,
-      'conclusion': report?.conclusion,
     };
 
     for (final entry in values.entries) {
       _controllers[entry.key] = _trackedController(entry.value ?? '');
-    }
-    for (final value in report?.teams ?? const <String>[]) {
-      _teams.add(_trackedController(value));
-    }
-    for (final value in report?.resources ?? const <String>[]) {
-      _resources.add(_trackedController(value));
     }
     _attachments.addAll(report?.attachments ?? const <String>[]);
   }
@@ -169,11 +192,11 @@ class _ReportFormPageState extends State<ReportFormPage>
     return switch (report.lastEditedStep) {
       0 => 0,
       1 => 2,
-      2 => 11,
+      2 => 13,
       3 => 6,
       4 => 7,
       5 => 10,
-      6 => 13,
+      6 => 16,
       _ => 0,
     };
   }
@@ -204,9 +227,6 @@ class _ReportFormPageState extends State<ReportFormPage>
     for (final controller in _controllers.values) {
       controller.dispose();
     }
-    for (final controller in [..._teams, ..._resources]) {
-      controller.dispose();
-    }
 
     if (pendingSnapshot != null) {
       unawaited(_store.upsert(pendingSnapshot));
@@ -221,6 +241,11 @@ class _ReportFormPageState extends State<ReportFormPage>
 
   void _onTriageChanged(SearchTriage value) {
     setState(() => _searchTriage = value);
+    _scheduleAutosave(contentChanged: true);
+  }
+
+  void _onOperationalChanged(OperationalReportContent value) {
+    setState(() => _operationalContent = value);
     _scheduleAutosave(contentChanged: true);
   }
 
@@ -308,9 +333,7 @@ class _ReportFormPageState extends State<ReportFormPage>
           start: _text('start'),
           end: _text('end'),
         ),
-        teams: _values(_teams),
-        resources: _values(_resources),
-        conclusion: _text('conclusion'),
+        operationalContent: _operationalContent,
         attachments: List.unmodifiable(_attachments),
         createdAt: _createdAt,
         updatedAt: DateTime.now(),
@@ -327,7 +350,7 @@ class _ReportFormPageState extends State<ReportFormPage>
       return;
     }
     if (_text('location').isEmpty) {
-      _goToStep(11);
+      _goToStep(13);
       _message('Preencha o local da operação.');
       return;
     }
@@ -382,11 +405,6 @@ class _ReportFormPageState extends State<ReportFormPage>
 
   String _text(String key) => _controllers[key]!.text.trim();
 
-  List<String> _values(List<TextEditingController> values) => values
-      .map((controller) => controller.text.trim())
-      .where((value) => value.isNotEmpty)
-      .toList();
-
   TextFormField _input(String key, {int minLines = 1}) => TextFormField(
         controller: _controllers[key],
         minLines: minLines,
@@ -396,53 +414,6 @@ class _ReportFormPageState extends State<ReportFormPage>
           alignLabelWithHint: minLines > 1,
           border: const OutlineInputBorder(),
         ),
-      );
-
-  Widget _repeatable(
-    String label,
-    List<TextEditingController> values,
-    IconData icon,
-  ) =>
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: Theme.of(context).textTheme.titleMedium),
-          ...values.asMap().entries.map(
-                (entry) => Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: entry.value,
-                          decoration: InputDecoration(
-                            labelText: '$label ${entry.key + 1}',
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        tooltip: 'Remover',
-                        onPressed: () {
-                          final removed = values.removeAt(entry.key);
-                          removed.dispose();
-                          setState(() {});
-                          _scheduleAutosave(contentChanged: true);
-                        },
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          TextButton.icon(
-            onPressed: () => setState(
-              () => values.add(_trackedController()),
-            ),
-            icon: Icon(icon),
-            label: Text('Adicionar $label'),
-          ),
-        ],
       );
 
   Widget _saveIndicator() {
@@ -496,17 +467,29 @@ class _ReportFormPageState extends State<ReportFormPage>
   }
 
   Widget _sectionContent() {
-    final triageSection = _sections[_step].triageSection;
+    final section = _sections[_step];
+    final triageSection = section.triageSection;
     if (triageSection != null) {
       return SearchTriageSectionView(
-        key: ValueKey(_sections[_step].id),
+        key: ValueKey(section.id),
         section: triageSection,
         value: _searchTriage,
         onChanged: _onTriageChanged,
       );
     }
 
-    return switch (_sections[_step].id) {
+    final operationalSection = section.operationalSection;
+    if (operationalSection != null &&
+        section.id != 'conclusionAndAttachments') {
+      return OperationalSectionView(
+        key: ValueKey(section.id),
+        section: operationalSection,
+        value: _operationalContent,
+        onChanged: _onOperationalChanged,
+      );
+    }
+
+    return switch (section.id) {
       'identification' => Column(
           children: [
             _input('title'),
@@ -532,20 +515,14 @@ class _ReportFormPageState extends State<ReportFormPage>
             _input('end'),
           ],
         ),
-      'teamsAndResources' => Column(
-          children: [
-            _repeatable('Equipe', _teams, Icons.group_add),
-            const SizedBox(height: 12),
-            _repeatable(
-              'Recurso',
-              _resources,
-              Icons.inventory_2_outlined,
-            ),
-          ],
-        ),
       'conclusionAndAttachments' => Column(
           children: [
-            _input('conclusion', minLines: 4),
+            OperationalSectionView(
+              key: const ValueKey('conclusion'),
+              section: OperationalSection.conclusion,
+              value: _operationalContent,
+              onChanged: _onOperationalChanged,
+            ),
             const SizedBox(height: 12),
             Align(
               alignment: Alignment.centerLeft,
@@ -665,11 +642,17 @@ class _ReportFormPageState extends State<ReportFormPage>
 }
 
 class _FormSection {
-  const _FormSection(this.id, this.label, [this.triageSection]);
+  const _FormSection(
+    this.id,
+    this.label, [
+    this.triageSection,
+    this.operationalSection,
+  ]);
 
   final String id;
   final String label;
   final SearchTriageSection? triageSection;
+  final OperationalSection? operationalSection;
 }
 
 String _dateLabel(DateTime date) =>
