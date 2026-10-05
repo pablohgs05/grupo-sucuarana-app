@@ -323,6 +323,99 @@ void main() {
     expect(attachmentStorage.deleted.single.id, 'att-b');
   });
 
+  testWidgets('revisão explícita precede readyForReview',
+      (tester) async {
+    final repository = _FakeReportRepository();
+    final report = _fakeReport(
+      id: 'review-flow-001',
+      title: 'Relatório para revisão fictício',
+      updatedAt: DateTime.utc(2026, 10, 5, 12),
+      lifecycle: ReportLifecycle.draft,
+      lastEditedSection: 'conclusionAndAttachments',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(
+          report: report,
+          reportRepository: repository,
+        ),
+      ),
+    );
+
+    final reviewButton = find.text('Revisar relatório');
+    await tester.ensureVisible(reviewButton);
+    await tester.tap(reviewButton);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Revisar relatório'), findsOneWidget);
+    expect(
+      repository.upserts.where(
+        (item) => item.lifecycle == ReportLifecycle.readyForReview,
+      ),
+      isEmpty,
+    );
+
+    final confirm = find.byKey(const ValueKey('confirm-review'));
+    await tester.scrollUntilVisible(
+      confirm,
+      700,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+
+    expect(repository.upserts, isNotEmpty);
+    expect(
+      repository.upserts.last.lifecycle,
+      ReportLifecycle.readyForReview,
+    );
+  });
+
+  testWidgets('revisão permite voltar diretamente para uma seção',
+      (tester) async {
+    final repository = _FakeReportRepository();
+    final report = _fakeReport(
+      id: 'review-edit-001',
+      title: 'Relatório para edição fictício',
+      updatedAt: DateTime.utc(2026, 10, 5, 12),
+      lifecycle: ReportLifecycle.draft,
+      lastEditedSection: 'conclusionAndAttachments',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(
+          report: report,
+          reportRepository: repository,
+        ),
+      ),
+    );
+
+    final reviewButton = find.text('Revisar relatório');
+    await tester.ensureVisible(reviewButton);
+    await tester.tap(reviewButton);
+    await tester.pumpAndSettle();
+
+    final editOperation = find.byKey(const ValueKey('edit-operation'));
+    await tester.scrollUntilVisible(
+      editOperation,
+      500,
+      scrollable: find.byType(Scrollable),
+    );
+    await tester.tap(editOperation);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Operação'), findsOneWidget);
+    expect(find.text('Etapa 14 de 17'), findsOneWidget);
+    expect(
+      repository.upserts.where(
+        (item) => item.lifecycle == ReportLifecycle.readyForReview,
+      ),
+      isEmpty,
+    );
+  });
+
   testWidgets('campo condicional preserva conteúdo ao ocultar e reexibir',
       (tester) async {
     final repository = _FakeReportRepository();
