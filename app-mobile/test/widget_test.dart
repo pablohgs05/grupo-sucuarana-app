@@ -214,7 +214,9 @@ void main() {
     );
 
     for (var index = 0; index < 4; index++) {
-      await tester.tap(find.text('Próximo'));
+      final next = find.text('Próximo');
+      await tester.ensureVisible(next);
+      await tester.tap(next);
       await tester.pump();
     }
 
