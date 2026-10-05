@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grupo_sucuarana_app/operational_report.dart';
+import 'package:grupo_sucuarana_app/report_attachment.dart';
 import 'package:grupo_sucuarana_app/report_model.dart';
 import 'package:grupo_sucuarana_app/search_triage.dart';
 
@@ -206,6 +207,71 @@ void main() {
       edited.searchTriage.previousActions.description,
       'Procedimentos editados',
     );
+  });
+
+  test('migra anexos legados para o modelo estruturado', () {
+    final updatedAt = DateTime.utc(2026, 10, 5, 12);
+    final report = Report.fromJson({
+      'id': 'legacy-attachments-report',
+      'identification': {
+        'title': 'Relatório fictício',
+        'date': updatedAt.toIso8601String(),
+        'coordinator': 'Equipe fictícia',
+      },
+      'missing': {
+        'name': 'Pessoa fictícia',
+        'lastSeen': '',
+        'contact': '',
+      },
+      'operation': {
+        'location': 'Local fictício',
+        'start': '',
+        'end': '',
+      },
+      'teams': <String>[],
+      'resources': <String>[],
+      'conclusion': '',
+      'attachments': <String>[
+        '/tmp/anexo-ficticio-a.jpg',
+        '/tmp/anexo-ficticio-b.png',
+      ],
+      'updatedAt': updatedAt.toIso8601String(),
+      'syncStatus': 'pending',
+    });
+
+    expect(report.attachmentItems, hasLength(2));
+    expect(report.attachmentItems.first.id, 'legacy-0');
+    expect(report.attachmentItems.first.originalName, 'anexo-ficticio-a.jpg');
+    expect(report.attachmentItems.first.managedLocalFile, isFalse);
+    expect(report.attachments.first, '/tmp/anexo-ficticio-a.jpg');
+  });
+
+  test('preserva anexos estruturados ordem e legenda no round-trip', () {
+    final report = _report().copyWith(
+      attachmentItems: const <ReportAttachment>[
+        ReportAttachment(
+          id: 'att-001',
+          localPath: '/local/ficticio/primeiro.jpg',
+          originalName: 'primeiro.jpg',
+          caption: 'Legenda fictícia A',
+          managedLocalFile: true,
+        ),
+        ReportAttachment(
+          id: 'att-002',
+          localPath: '/local/ficticio/segundo.jpg',
+          originalName: 'segundo.jpg',
+          caption: 'Legenda fictícia B',
+          managedLocalFile: true,
+        ),
+      ],
+    );
+
+    final decoded = Report.fromJson(report.toJson());
+
+    expect(decoded.toJson(), report.toJson());
+    expect(decoded.attachmentItems.map((item) => item.id).toList(),
+        <String>['att-001', 'att-002']);
+    expect(decoded.attachmentItems.last.caption, 'Legenda fictícia B');
   });
 
   test('preserva identificador estável da seção em edição', () {

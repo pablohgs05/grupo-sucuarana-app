@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grupo_sucuarana_app/operational_report.dart';
+import 'package:grupo_sucuarana_app/report_attachment.dart';
 import 'package:grupo_sucuarana_app/report_model.dart';
 import 'package:grupo_sucuarana_app/report_store.dart';
 import 'package:grupo_sucuarana_app/search_triage.dart';
@@ -154,6 +155,42 @@ void main() {
       'Desenvolvimento fictício.',
     );
     expect(loaded.single.operationalContent.teams.single.members, hasLength(1));
+  });
+
+  test('persists structured attachment metadata after reopening',
+      () async {
+    final report = _fakeReport().copyWith(
+      attachmentItems: const <ReportAttachment>[
+        ReportAttachment(
+          id: 'att-db-001',
+          localPath: '/local/ficticio/anexo.jpg',
+          originalName: 'anexo.jpg',
+          caption: 'Legenda persistida fictícia',
+          managedLocalFile: true,
+        ),
+      ],
+    );
+
+    final firstStore = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    await firstStore.upsert(report);
+    await firstStore.close();
+
+    final reopenedStore = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    final loaded = await reopenedStore.load();
+    await reopenedStore.close();
+
+    expect(loaded.single.attachmentItems, hasLength(1));
+    expect(loaded.single.attachmentItems.single.id, 'att-db-001');
+    expect(
+      loaded.single.attachmentItems.single.caption,
+      'Legenda persistida fictícia',
+    );
   });
 
   test('upsert updates one report without deleting the others', () async {

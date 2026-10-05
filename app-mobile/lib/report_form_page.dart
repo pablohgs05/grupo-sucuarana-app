@@ -1,12 +1,13 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+import 'attachment_storage.dart';
 import 'operational_report.dart';
 import 'operational/operational_sections.dart';
+import 'report_attachment.dart';
 import 'report_model.dart';
 import 'report_pdf.dart';
 import 'report_store.dart';
@@ -18,10 +19,12 @@ class ReportFormPage extends StatefulWidget {
     super.key,
     this.report,
     this.reportRepository,
+    this.attachmentStorage,
   });
 
   final Report? report;
   final ReportRepository? reportRepository;
+  final AttachmentStorage? attachmentStorage;
 
   @override
   State<ReportFormPage> createState() => _ReportFormPageState();
@@ -118,9 +121,10 @@ class _ReportFormPageState extends State<ReportFormPage>
 
   final _picker = ImagePicker();
   final _controllers = <String, TextEditingController>{};
-  final _attachments = <String>[];
+  final _attachments = <ReportAttachment>[];
 
   late final ReportRepository _store;
+  late final AttachmentStorage _attachmentStorage;
   late final String _reportId;
   late final DateTime _createdAt;
   late DateTime _date;
@@ -153,6 +157,8 @@ class _ReportFormPageState extends State<ReportFormPage>
 
     final report = widget.report;
     _store = widget.reportRepository ?? ReportStore();
+    _attachmentStorage =
+        widget.attachmentStorage ?? LocalAttachmentStorage();
     _reportId = report?.id ?? const Uuid().v4();
     _createdAt = report?.createdAt ?? DateTime.now();
     _date = report?.identification.date ?? DateTime.now();
@@ -175,7 +181,9 @@ class _ReportFormPageState extends State<ReportFormPage>
     for (final entry in values.entries) {
       _controllers[entry.key] = _trackedController(entry.value ?? '');
     }
-    _attachments.addAll(report?.attachments ?? const <String>[]);
+    _attachments.addAll(
+      report?.attachmentItems ?? const <ReportAttachment>[],
+    );
   }
 
   int _restoreStep(Report? report) {
@@ -334,7 +342,7 @@ class _ReportFormPageState extends State<ReportFormPage>
           end: _text('end'),
         ),
         operationalContent: _operationalContent,
-        attachments: List.unmodifiable(_attachments),
+        attachmentItems: List.unmodifiable(_attachments),
         createdAt: _createdAt,
         updatedAt: DateTime.now(),
         lifecycle: lifecycle ?? _lifecycle,
@@ -381,21 +389,65 @@ class _ReportFormPageState extends State<ReportFormPage>
   Future<void> _attach() async {
     try {
       final image = await _picker.pickImage(source: ImageSource.gallery);
-      if (image != null) {
-        setState(
-          () => _attachments.add(kIsWeb ? image.name : image.path),
-        );
-        _scheduleAutosave(contentChanged: true);
-      }
+      if (image == null) return;
+
+      final attachment = await _attachmentStorage.persistImage(
+        reportId: _reportId,
+        originalName: image.name,
+        bytes: await image.readAsBytes(),
+      );
+      if (!mounted) return;
+
+      setState(() => _attachments.add(attachment));
+      _scheduleAutosave(contentChanged: true);
     } on UnsupportedError {
       if (mounted) _message('Anexos não são suportados neste ambiente.');
     } catch (_) {
-      if (mounted) _message('Não foi possível selecionar o anexo.');
+      if (mounted) {
+        _message('Não foi possível persistir o anexo no dispositivo.');
+      }
     }
   }
 
-  void _removeAttachment(int index) {
+  Future<void> _removeAttachment(int index) async {
+    final removed = _attachments[index];
+
     setState(() => _attachments.removeAt(index));
+    _scheduleAutosave(contentChanged: true);
+
+    final saved = await _persistDraft();
+    if (!saved) {
+      if (mounted) {
+        setState(() => _attachments.insert(index, removed));
+        _scheduleAutosave(contentChanged: true);
+        _message('Não foi possível remover o anexo com segurança.');
+      }
+      return;
+    }
+
+    try {
+      await _attachmentStorage.delete(removed);
+    } catch (_) {
+      if (mounted) {
+        _message(
+          'Anexo removido do relatório, mas o arquivo local não pôde ser limpo.',
+        );
+      }
+    }
+  }
+
+  void _updateAttachmentCaption(int index, String caption) {
+    _attachments[index] = _attachments[index].copyWith(caption: caption);
+    _scheduleAutosave(contentChanged: true);
+  }
+
+  void _moveAttachment(int from, int to) {
+    if (to < 0 || to >= _attachments.length || from == to) return;
+
+    setState(() {
+      final item = _attachments.removeAt(from);
+      _attachments.insert(to, item);
+    });
     _scheduleAutosave(contentChanged: true);
   }
 
@@ -533,16 +585,75 @@ class _ReportFormPageState extends State<ReportFormPage>
               ),
             ),
             ..._attachments.asMap().entries.map(
-                  (entry) => ListTile(
-                    dense: true,
-                    leading: const Icon(Icons.image_outlined),
-                    title: Text(
-                      entry.value,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    trailing: IconButton(
-                      onPressed: () => _removeAttachment(entry.key),
-                      icon: const Icon(Icons.delete_outline),
+                  (entry) => Card(
+                    key: ValueKey('attachment-${entry.value.id}'),
+                    margin: const EdgeInsets.only(top: 8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.image_outlined),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  entry.value.originalName,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: 'Mover para cima',
+                                onPressed: entry.key == 0
+                                    ? null
+                                    : () => _moveAttachment(
+                                          entry.key,
+                                          entry.key - 1,
+                                        ),
+                                icon: const Icon(Icons.arrow_upward),
+                              ),
+                              IconButton(
+                                tooltip: 'Mover para baixo',
+                                onPressed:
+                                    entry.key == _attachments.length - 1
+                                        ? null
+                                        : () => _moveAttachment(
+                                              entry.key,
+                                              entry.key + 1,
+                                            ),
+                                icon: const Icon(Icons.arrow_downward),
+                              ),
+                              IconButton(
+                                tooltip: 'Remover anexo',
+                                onPressed: () => unawaited(
+                                  _removeAttachment(entry.key),
+                                ),
+                                icon: const Icon(Icons.delete_outline),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            key: ValueKey(
+                              'attachment-caption-${entry.value.id}',
+                            ),
+                            initialValue: entry.value.caption,
+                            minLines: 2,
+                            maxLines: null,
+                            onChanged: (caption) =>
+                                _updateAttachmentCaption(
+                                  entry.key,
+                                  caption,
+                                ),
+                            decoration: const InputDecoration(
+                              labelText: 'Legenda do anexo',
+                              alignLabelWithHint: true,
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

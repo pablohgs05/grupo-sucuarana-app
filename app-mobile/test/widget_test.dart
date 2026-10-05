@@ -1,8 +1,11 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:grupo_sucuarana_app/attachment_storage.dart';
 import 'package:grupo_sucuarana_app/operational_report.dart';
+import 'package:grupo_sucuarana_app/report_attachment.dart';
 import 'package:grupo_sucuarana_app/main.dart';
 import 'package:grupo_sucuarana_app/report_model.dart';
 import 'package:grupo_sucuarana_app/report_store.dart';
@@ -243,6 +246,83 @@ void main() {
     expect(repository.upserts.last.lifecycle, ReportLifecycle.draft);
   });
 
+  testWidgets('gerencia legenda ordem e remoção de anexos persistentes',
+      (tester) async {
+    final repository = _FakeReportRepository();
+    final attachmentStorage = _FakeAttachmentStorage();
+    final report = _fakeReport(
+      id: 'attachments-draft-001',
+      title: 'Rascunho com anexos fictícios',
+      updatedAt: DateTime.utc(2026, 10, 5, 12),
+      lifecycle: ReportLifecycle.draft,
+      lastEditedSection: 'conclusionAndAttachments',
+      attachmentItems: const <ReportAttachment>[
+        ReportAttachment(
+          id: 'att-a',
+          localPath: '/managed/ficticio/a.jpg',
+          originalName: 'a.jpg',
+          caption: '',
+          managedLocalFile: true,
+        ),
+        ReportAttachment(
+          id: 'att-b',
+          localPath: '/managed/ficticio/b.jpg',
+          originalName: 'b.jpg',
+          caption: '',
+          managedLocalFile: true,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(
+          report: report,
+          reportRepository: repository,
+          attachmentStorage: attachmentStorage,
+        ),
+      ),
+    );
+
+    expect(find.text('Etapa 17 de 17'), findsOneWidget);
+    expect(find.text('a.jpg'), findsOneWidget);
+    expect(find.text('b.jpg'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey('attachment-caption-att-a')),
+      'Legenda fictícia do anexo A',
+    );
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pump();
+
+    expect(repository.upserts, isNotEmpty);
+    expect(
+      repository.upserts.last.attachmentItems.first.caption,
+      'Legenda fictícia do anexo A',
+    );
+
+    final moveDown = find.byTooltip('Mover para baixo').first;
+    await tester.ensureVisible(moveDown);
+    await tester.tap(moveDown);
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pump();
+
+    expect(
+      repository.upserts.last.attachmentItems.map((item) => item.id).toList(),
+      <String>['att-b', 'att-a'],
+    );
+
+    final remove = find.byTooltip('Remover anexo').first;
+    await tester.ensureVisible(remove);
+    await tester.tap(remove);
+    await tester.pump();
+    await tester.pump();
+
+    expect(repository.upserts.last.attachmentItems, hasLength(1));
+    expect(repository.upserts.last.attachmentItems.single.id, 'att-a');
+    expect(attachmentStorage.deleted.single.id, 'att-b');
+  });
+
   testWidgets('campo condicional preserva conteúdo ao ocultar e reexibir',
       (tester) async {
     final repository = _FakeReportRepository();
@@ -300,6 +380,29 @@ void main() {
   });
 }
 
+class _FakeAttachmentStorage implements AttachmentStorage {
+  final List<ReportAttachment> deleted = <ReportAttachment>[];
+
+  @override
+  Future<ReportAttachment> persistImage({
+    required String reportId,
+    required String originalName,
+    required Uint8List bytes,
+  }) async =>
+      ReportAttachment(
+        id: 'persisted-ficticio',
+        localPath: '/managed/ficticio/persisted.jpg',
+        originalName: originalName,
+        caption: '',
+        managedLocalFile: true,
+      );
+
+  @override
+  Future<void> delete(ReportAttachment attachment) async {
+    deleted.add(attachment);
+  }
+}
+
 class _FakeReportRepository implements ReportRepository {
   final List<Completer<List<Report>>> _loads = <Completer<List<Report>>>[];
   final List<Report> upserts = <Report>[];
@@ -339,6 +442,7 @@ Report _fakeReport({
   int lastEditedStep = 0,
   String? lastEditedSection,
   OperationalReportContent? operationalContent,
+  List<ReportAttachment>? attachmentItems,
 }) {
   return Report(
     id: id,
@@ -366,6 +470,7 @@ Report _fakeReport({
     resources: const <String>['Recurso de teste'],
     conclusion: 'Conclusão fictícia.',
     attachments: const <String>[],
+    attachmentItems: attachmentItems,
     createdAt: updatedAt.subtract(const Duration(hours: 1)),
     updatedAt: updatedAt,
     lifecycle: lifecycle,
