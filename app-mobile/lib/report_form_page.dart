@@ -10,6 +10,7 @@ import 'operational/operational_sections.dart';
 import 'report_attachment.dart';
 import 'report_model.dart';
 import 'report_pdf.dart';
+import 'report_review_page.dart';
 import 'report_store.dart';
 import 'search_triage.dart';
 import 'triage/search_triage_sections.dart';
@@ -351,7 +352,7 @@ class _ReportFormPageState extends State<ReportFormPage>
         syncStatus: _syncStatus,
       );
 
-  Future<void> _saveFinal() async {
+  Future<void> _reviewReport() async {
     if (_text('title').isEmpty) {
       _goToStep(0);
       _message('Preencha o título do relatório.');
@@ -363,6 +364,33 @@ class _ReportFormPageState extends State<ReportFormPage>
       return;
     }
 
+    final saved = await _persistDraft();
+    if (!saved || !mounted) return;
+
+    final result = await Navigator.of(context).push<ReportReviewResult>(
+      MaterialPageRoute(
+        builder: (_) => ReportReviewPage(report: _snapshot()),
+      ),
+    );
+    if (!mounted || result == null) return;
+
+    final editSection = result.editSection;
+    if (editSection != null) {
+      final index = _sections.indexWhere(
+        (section) => section.id == editSection,
+      );
+      if (index >= 0) {
+        _goToStep(index);
+      }
+      return;
+    }
+
+    if (result.confirmed) {
+      await _saveFinal();
+    }
+  }
+
+  Future<void> _saveFinal() async {
     _autosaveTimer?.cancel();
     setState(() {
       _lifecycle = ReportLifecycle.readyForReview;
@@ -673,12 +701,12 @@ class _ReportFormPageState extends State<ReportFormPage>
                   if (_step < _sections.length - 1) {
                     _goToStep(_step + 1);
                   } else {
-                    unawaited(_saveFinal());
+                    unawaited(_reviewReport());
                   }
                 },
                 child: Text(
                   _step == _sections.length - 1
-                      ? 'Salvar offline'
+                      ? 'Revisar relatório'
                       : 'Próximo',
                 ),
               ),
