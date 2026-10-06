@@ -105,7 +105,12 @@ String _formatTimeDigits(String digits) {
 }
 
 int _digitCountBeforeSelection(TextEditingValue value) {
-  final offset = value.selection.baseOffset.clamp(0, value.text.length);
+  final selectionOffset = value.selection.baseOffset;
+  final offset = selectionOffset < 0
+      ? 0
+      : selectionOffset > value.text.length
+          ? value.text.length
+          : selectionOffset;
   return value.text
       .substring(0, offset)
       .replaceAll(RegExp(r'\D'), '')
