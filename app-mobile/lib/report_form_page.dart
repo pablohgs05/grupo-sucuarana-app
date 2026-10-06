@@ -9,7 +9,7 @@ import 'operational_report.dart';
 import 'operational/operational_sections.dart';
 import 'report_attachment.dart';
 import 'report_model.dart';
-import 'report_pdf.dart';
+import 'report_pdf_preview_page.dart';
 import 'report_review_page.dart';
 import 'report_store.dart';
 import 'search_triage.dart';
@@ -414,6 +414,19 @@ class _ReportFormPageState extends State<ReportFormPage>
     }
   }
 
+  Future<void> _previewPdf() async {
+    final saved = await _persistDraft();
+    if (!saved || !mounted) return;
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ReportPdfPreviewPage(
+          report: _snapshot(),
+        ),
+      ),
+    );
+  }
+
   Future<void> _attach() async {
     try {
       final image = await _picker.pickImage(source: ImageSource.gallery);
@@ -753,8 +766,8 @@ class _ReportFormPageState extends State<ReportFormPage>
           actions: [
             if (widget.report != null)
               IconButton(
-                onPressed: () => exportReportPdf(_snapshot()),
-                tooltip: 'Exportar PDF',
+                onPressed: () => unawaited(_previewPdf()),
+                tooltip: 'Visualizar PDF',
                 icon: const Icon(Icons.picture_as_pdf_outlined),
               ),
           ],
