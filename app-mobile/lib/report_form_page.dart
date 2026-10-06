@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
@@ -13,6 +14,7 @@ import 'report_pdf_preview_page.dart';
 import 'report_review_page.dart';
 import 'report_store.dart';
 import 'search_triage.dart';
+import 'structured_input_formatters.dart';
 import 'triage/search_triage_sections.dart';
 
 class ReportFormPage extends StatefulWidget {
@@ -498,12 +500,27 @@ class _ReportFormPageState extends State<ReportFormPage>
 
   String _text(String key) => _controllers[key]!.text.trim();
 
-  TextFormField _input(String key, {int minLines = 1}) => TextFormField(
+  TextFormField _input(
+    String key, {
+    int minLines = 1,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? hintText,
+    FormFieldValidator<String>? validator,
+  }) =>
+      TextFormField(
         controller: _controllers[key],
         minLines: minLines,
         maxLines: minLines == 1 ? 1 : null,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
+        autovalidateMode: validator == null
+            ? AutovalidateMode.disabled
+            : AutovalidateMode.onUserInteraction,
+        validator: validator,
         decoration: InputDecoration(
           labelText: _fields[key],
+          hintText: hintText,
           alignLabelWithHint: minLines > 1,
           border: const OutlineInputBorder(),
         ),
@@ -603,9 +620,21 @@ class _ReportFormPageState extends State<ReportFormPage>
           children: [
             _input('location'),
             const SizedBox(height: 12),
-            _input('start'),
+            _input(
+              'start',
+              keyboardType: TextInputType.number,
+              inputFormatters: const [TimeDigitsInputFormatter()],
+              hintText: 'HH:MM',
+              validator: validateTimeInput,
+            ),
             const SizedBox(height: 12),
-            _input('end'),
+            _input(
+              'end',
+              keyboardType: TextInputType.number,
+              inputFormatters: const [TimeDigitsInputFormatter()],
+              hintText: 'HH:MM',
+              validator: validateTimeInput,
+            ),
           ],
         ),
       'conclusionAndAttachments' => Column(

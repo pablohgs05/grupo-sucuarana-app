@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../search_triage.dart';
+import '../structured_input_formatters.dart';
 
 enum SearchTriageSection {
   metadata,
@@ -60,6 +62,10 @@ class SearchTriageSectionView extends StatelessWidget {
       _field(
         label: 'Data do fato',
         value: data.factDate,
+        keyboardType: TextInputType.number,
+        inputFormatters: const [DateDigitsInputFormatter()],
+        hintText: 'DD/MM/AAAA',
+        validator: validateDateInput,
         onChanged: (text) => onChanged(
           value.copyWith(metadata: data.copyWith(factDate: text)),
         ),
@@ -68,6 +74,10 @@ class SearchTriageSectionView extends StatelessWidget {
       _field(
         label: 'Hora do fato',
         value: data.factTime,
+        keyboardType: TextInputType.number,
+        inputFormatters: const [TimeDigitsInputFormatter()],
+        hintText: 'HH:MM',
+        validator: validateTimeInput,
         onChanged: (text) => onChanged(
           value.copyWith(metadata: data.copyWith(factTime: text)),
         ),
@@ -76,6 +86,10 @@ class SearchTriageSectionView extends StatelessWidget {
       _field(
         label: 'Data do aviso',
         value: data.noticeDate,
+        keyboardType: TextInputType.number,
+        inputFormatters: const [DateDigitsInputFormatter()],
+        hintText: 'DD/MM/AAAA',
+        validator: validateDateInput,
         onChanged: (text) => onChanged(
           value.copyWith(metadata: data.copyWith(noticeDate: text)),
         ),
@@ -84,6 +98,10 @@ class SearchTriageSectionView extends StatelessWidget {
       _field(
         label: 'Hora do aviso',
         value: data.noticeTime,
+        keyboardType: TextInputType.number,
+        inputFormatters: const [TimeDigitsInputFormatter()],
+        hintText: 'HH:MM',
+        validator: validateTimeInput,
         onChanged: (text) => onChanged(
           value.copyWith(metadata: data.copyWith(noticeTime: text)),
         ),
@@ -885,14 +903,25 @@ class SearchTriageSectionView extends StatelessWidget {
     required String value,
     required ValueChanged<String> onChanged,
     int minLines = 1,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? hintText,
+    FormFieldValidator<String>? validator,
   }) =>
       TextFormField(
         initialValue: value,
         minLines: minLines,
         maxLines: minLines == 1 ? 1 : null,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
+        autovalidateMode: validator == null
+            ? AutovalidateMode.disabled
+            : AutovalidateMode.onUserInteraction,
+        validator: validator,
         onChanged: onChanged,
         decoration: InputDecoration(
           labelText: label,
+          hintText: hintText,
           alignLabelWithHint: minLines > 1,
           border: const OutlineInputBorder(),
         ),
