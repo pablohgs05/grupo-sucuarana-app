@@ -27,6 +27,9 @@ jobs:
     name: Build Android debug APK
     runs-on: ubuntu-latest
 
+    env:
+      FIELD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
     defaults:
       run:
         working-directory: app-mobile
@@ -34,6 +37,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+        with:
+          ref: ${{ env.FIELD_SHA }}
 
       - name: Set up Java
         uses: actions/setup-java@v6
@@ -62,7 +67,7 @@ jobs:
       - name: Upload Android field-test APK
         uses: actions/upload-artifact@v7
         with:
-          name: grupo-sucuarana-m10-${{ github.sha }}
+          name: grupo-sucuarana-m10-${{ env.FIELD_SHA }}
           path: ${{ runner.temp }}/grupo-sucuarana-m10-*.apk
           if-no-files-found: error
           retention-days: 14
