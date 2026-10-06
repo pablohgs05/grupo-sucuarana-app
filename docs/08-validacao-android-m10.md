@@ -19,6 +19,35 @@ evitar testar uma build diferente da que foi registrada no checklist.
 
 > O APK é de teste e usa assinatura de debug. Ele não é uma build de produção.
 
+### Como obter o APK
+
+No GitHub:
+
+1. abra **Actions**;
+2. abra o workflow **Android Field Build**;
+3. escolha a execução correspondente ao commit que será validado;
+4. na seção **Artifacts**, baixe `grupo-sucuarana-m10-<sha>`;
+5. extraia o arquivo `.apk`.
+
+Durante a PR do M10, o mesmo workflow também gera o APK da cabeça da PR. Depois
+do merge, ele gera novamente a build da `dev`, permitindo uma validação final
+do commit efetivamente integrado.
+
+### Como instalar
+
+Opção simples: copie o APK para o aparelho, abra o arquivo e permita a
+instalação desta fonte apenas para a instalação de teste.
+
+Com Android Platform-Tools e depuração USB habilitada, também é possível usar:
+
+```powershell
+adb devices
+adb install -r .\grupo-sucuarana-m10-<sha>.apk
+```
+
+Antes de cada rodada formal, confirme que o SHA no nome do APK corresponde ao
+SHA registrado no checklist.
+
 Registre antes de iniciar:
 
 - commit/SHA:
