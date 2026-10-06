@@ -242,6 +242,77 @@ void main() {
     expect(repository.upserts.last.lifecycle, ReportLifecycle.draft);
   });
 
+  testWidgets('normaliza data e hora da triagem durante digitação',
+      (tester) async {
+    final repository = _FakeReportRepository();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(reportRepository: repository),
+      ),
+    );
+
+    await tester.tap(find.text('Próximo'));
+    await tester.pump();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Data do fato'),
+      '06102026',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Hora do fato'),
+      '1238',
+    );
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pump();
+
+    expect(repository.upserts, isNotEmpty);
+    expect(
+      repository.upserts.last.searchTriage.metadata.factDate,
+      '06/10/2026',
+    );
+    expect(
+      repository.upserts.last.searchTriage.metadata.factTime,
+      '12:38',
+    );
+  });
+
+  testWidgets('normaliza horários operacionais antes do autosave',
+      (tester) async {
+    final repository = _FakeReportRepository();
+    final report = _fakeReport(
+      id: 'operation-time-001',
+      title: 'Relatório com horário fictício',
+      updatedAt: DateTime.utc(2026, 10, 6, 12),
+      lifecycle: ReportLifecycle.draft,
+      lastEditedSection: 'operation',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(
+          report: report,
+          reportRepository: repository,
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Início'),
+      '0900',
+    );
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Término'),
+      '1745',
+    );
+    await tester.pump(const Duration(milliseconds: 750));
+    await tester.pump();
+
+    expect(repository.upserts, isNotEmpty);
+    expect(repository.upserts.last.operation.start, '09:00');
+    expect(repository.upserts.last.operation.end, '17:45');
+  });
+
   testWidgets('autosave persiste narrativa operacional estruturada',
       (tester) async {
     final repository = _FakeReportRepository();
