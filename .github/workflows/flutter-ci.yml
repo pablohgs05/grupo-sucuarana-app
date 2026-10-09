@@ -68,6 +68,15 @@ jobs:
           path: app-mobile/coverage/lcov.info
           if-no-files-found: error
 
+      - name: Set up Java for Android
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Build Android debug APK
+        run: flutter build apk --debug
+
   backend:
     name: Test backend
     runs-on: ubuntu-latest
