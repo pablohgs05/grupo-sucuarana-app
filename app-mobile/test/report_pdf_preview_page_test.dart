@@ -81,7 +81,7 @@ void main() {
             }
             return Uint8List.fromList(<int>[37, 80, 68, 70]);
           },
-          previewBuilder: (_, __) => const Text(
+          previewBuilder: (_, _) => const Text(
             'preview recuperado',
             key: ValueKey('recovered-preview'),
           ),
@@ -109,7 +109,7 @@ void main() {
           report: _report(),
           bytesBuilder: (_) async =>
               Uint8List.fromList(<int>[37, 80, 68, 70]),
-          previewBuilder: (_, __) => const Text('preview fictício'),
+          previewBuilder: (_, _) => const Text('preview fictício'),
           printAction: (
             _, {
             required String filename,
