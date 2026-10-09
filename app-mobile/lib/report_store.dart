@@ -9,9 +9,8 @@ import 'report_model.dart';
 class ReportStore {
   ReportStore({
     DatabaseFactory? factory,
-    String? databasePath,
-  })  : _databaseFactory = factory ?? databaseFactory,
-        _databasePath = databasePath;
+    this._databasePath,
+  }) : _databaseFactory = factory ?? databaseFactory;
 
   static const _databaseName = 'grupo_sucuarana.db';
   static const _databaseVersion = 1;
