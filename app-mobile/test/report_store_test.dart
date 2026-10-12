@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:grupo_sucuarana_app/operational_report.dart';
+import 'package:grupo_sucuarana_app/report_attachment.dart';
 import 'package:grupo_sucuarana_app/report_model.dart';
 import 'package:grupo_sucuarana_app/report_store.dart';
+import 'package:grupo_sucuarana_app/search_triage.dart';
 import 'package:path/path.dart' as p;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -48,6 +51,181 @@ void main() {
     expect(loaded.single.toJson(), equals(report.toJson()));
   });
 
+  test('persists structured triage fields after reopening', () async {
+    final report = _fakeReport(
+      searchTriage: const SearchTriage(
+        metadata: TriageMetadata(
+          formNumber: 'FORM-DB-FICTICIO',
+          factDate: '02/10/2026',
+          factTime: '09:00',
+          noticeDate: '02/10/2026',
+          noticeTime: '09:30',
+        ),
+        person: PersonIdentification.empty,
+        relatedPeople: <RelatedPerson>[
+          RelatedPerson(
+            relation: 'Familiar fictício',
+            name: 'Pessoa fictícia',
+            contact: 'Contato fictício',
+          ),
+        ],
+        historyAndDestination: HistoryAndDestination.empty,
+        transportation: Transportation.empty,
+        lastSeen: LastSeen.empty,
+        physicalDescription: PhysicalDescription.empty,
+        clothingAndAccessories: ClothingAndAccessories.empty,
+        personalSupplies: PersonalSupplies.empty,
+        healthAndBehavior: HealthAndBehavior.empty,
+        experienceAndResistance: ExperienceAndResistance.empty,
+        previousActions: PreviousActions.empty,
+      ),
+    );
+
+    final firstStore = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    await firstStore.upsert(report);
+    await firstStore.close();
+
+    final reopenedStore = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    final loaded = await reopenedStore.load();
+    await reopenedStore.close();
+
+    expect(loaded.single.searchTriage.metadata.formNumber, 'FORM-DB-FICTICIO');
+    expect(loaded.single.searchTriage.relatedPeople, hasLength(1));
+    expect(
+      loaded.single.searchTriage.relatedPeople.single.relation,
+      'Familiar fictício',
+    );
+  });
+
+  test('persists structured operational content after reopening',
+      () async {
+    final report = _fakeReport(
+      operationalContent: const OperationalReportContent(
+        generalInformation: OperationalGeneralInformation(
+          externalReference: 'REF-DB-FICTICIA',
+          documentRg: '',
+          documentCpf: '',
+          phone: '',
+          contactMadeBy: 'Contato fictício',
+        ),
+        occurrenceNarrative: 'Ocorrência fictícia.',
+        developmentNarrative: 'Desenvolvimento fictício.',
+        teams: <OperationalTeam>[
+          OperationalTeam(
+            name: 'Equipe fictícia',
+            members: <String>['Integrante fictício'],
+          ),
+        ],
+        resources: <OperationalResource>[
+          OperationalResource(
+            description: 'Recurso fictício',
+            purpose: 'Finalidade fictícia',
+          ),
+        ],
+        conclusion: 'Conclusão fictícia.',
+      ),
+    );
+
+    final firstStore = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    await firstStore.upsert(report);
+    await firstStore.close();
+
+    final reopenedStore = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    final loaded = await reopenedStore.load();
+    await reopenedStore.close();
+
+    expect(
+      loaded.single.operationalContent.generalInformation.externalReference,
+      'REF-DB-FICTICIA',
+    );
+    expect(
+      loaded.single.operationalContent.developmentNarrative,
+      'Desenvolvimento fictício.',
+    );
+    expect(loaded.single.operationalContent.teams.single.members, hasLength(1));
+  });
+
+  test('persists structured attachment metadata after reopening',
+      () async {
+    final report = _fakeReport().copyWith(
+      attachmentItems: const <ReportAttachment>[
+        ReportAttachment(
+          id: 'att-db-001',
+          localPath: '/local/ficticio/anexo.jpg',
+          originalName: 'anexo.jpg',
+          caption: 'Legenda persistida fictícia',
+          managedLocalFile: true,
+        ),
+      ],
+    );
+
+    final firstStore = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    await firstStore.upsert(report);
+    await firstStore.close();
+
+    final reopenedStore = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    final loaded = await reopenedStore.load();
+    await reopenedStore.close();
+
+    expect(loaded.single.attachmentItems, hasLength(1));
+    expect(loaded.single.attachmentItems.single.id, 'att-db-001');
+    expect(
+      loaded.single.attachmentItems.single.caption,
+      'Legenda persistida fictícia',
+    );
+  });
+
+  test('upsert updates one report without deleting the others', () async {
+    final first = _fakeReport(id: 'report-001', title: 'Primeiro');
+    final second = _fakeReport(id: 'report-002', title: 'Segundo');
+
+    final store = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    await store.save([first, second]);
+
+    final updatedFirst = _fakeReport(
+      id: first.id,
+      title: 'Primeiro atualizado',
+      updatedAt: DateTime.utc(2026, 10, 1, 13),
+      lifecycle: ReportLifecycle.draft,
+      lastEditedStep: 3,
+    );
+    await store.upsert(updatedFirst);
+
+    final loaded = await store.load();
+    await store.close();
+
+    expect(loaded, hasLength(2));
+    expect(
+      loaded.singleWhere((report) => report.id == first.id).title,
+      'Primeiro atualizado',
+    );
+    expect(
+      loaded.singleWhere((report) => report.id == second.id).title,
+      'Segundo',
+    );
+  });
+
   test('migrates legacy SharedPreferences data without deleting it', () async {
     final report = _fakeReport();
     final legacyJson = jsonEncode(report.toJson());
@@ -77,14 +255,24 @@ void main() {
   });
 }
 
-Report _fakeReport() {
+Report _fakeReport({
+  String id = 'report-test-001',
+  String title = 'Operação de teste',
+  DateTime? updatedAt,
+  ReportLifecycle lifecycle = ReportLifecycle.readyForReview,
+  int lastEditedStep = 0,
+  SearchTriage? searchTriage,
+  OperationalReportContent? operationalContent,
+}) {
+  final timestamp = updatedAt ?? DateTime.utc(2026, 10, 1, 12, 30);
   return Report(
-    id: 'report-test-001',
+    id: id,
     identification: Identification(
-      title: 'Operação de teste',
+      title: title,
       date: DateTime.utc(2026, 10, 1),
       coordinator: 'Equipe de teste',
     ),
+    searchTriage: searchTriage,
     missing: const MissingPerson(
       name: 'Pessoa fictícia',
       lastSeen: 'Local fictício',
@@ -95,6 +283,7 @@ Report _fakeReport() {
       start: '08:00',
       end: '12:00',
     ),
+    operationalContent: operationalContent,
     physicalDescription: 'Descrição fictícia.',
     clothing: 'Vestimenta fictícia.',
     health: 'Sem dados reais.',
@@ -103,7 +292,10 @@ Report _fakeReport() {
     resources: const ['Recurso de teste'],
     conclusion: 'Conclusão fictícia.',
     attachments: const [],
-    updatedAt: DateTime.utc(2026, 10, 1, 12, 30),
+    createdAt: DateTime.utc(2026, 10, 1, 12),
+    updatedAt: timestamp,
+    lifecycle: lifecycle,
+    lastEditedStep: lastEditedStep,
     syncStatus: SyncStatus.pending,
   );
 }
