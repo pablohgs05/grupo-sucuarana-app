@@ -26,6 +26,59 @@ void main() {
     expect(String.fromCharCodes(bytes.take(4)), '%PDF');
   });
 
+  test('gera sumário e mantém múltiplos anexos em páginas válidas',
+      () async {
+    final original = _report();
+    final report = original.copyWith(
+      operationalContent: original.operationalContent.copyWith(
+        occurrenceNarrative: List.filled(
+          16,
+          'Narrativa fictícia extensa para exercitar a paginação do relatório.',
+        ).join(' '),
+        developmentNarrative: List.filled(
+          8,
+          'Atividade fictícia documentada para teste de paginação.',
+        ).join(' '),
+      ),
+      attachmentItems: <ReportAttachment>[
+        const ReportAttachment(
+          id: 'pdf-att-001',
+          localPath: '/local/ficticio/imagem-01.png',
+          originalName: 'imagem-ficticia-01.png',
+          caption: 'Legenda fictícia da primeira fotografia.',
+          managedLocalFile: true,
+        ),
+        ReportAttachment(
+          id: 'pdf-att-002',
+          localPath: '/local/ficticio/imagem-02.png',
+          originalName: 'imagem-ficticia-02.png',
+          caption: List.filled(
+            5,
+            'Legenda fictícia mais longa para testar a apresentação.',
+          ).join(' '),
+          managedLocalFile: true,
+        ),
+      ],
+    );
+
+    final loadedIds = <String>[];
+    final bytes = await buildReportPdfBytes(
+      report,
+      attachmentBytesLoader: (attachment) async {
+        loadedIds.add(attachment.id);
+        return base64Decode(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4//8/AAX+Av4N70a4AAAAAElFTkSuQmCC',
+        );
+      },
+    );
+
+    // The TOC renderer validates that section outlines have real page numbers.
+    // Inseparable photo/caption blocks must also fit without layout exceptions.
+    expect(loadedIds, <String>['pdf-att-001', 'pdf-att-002']);
+    expect(bytes.length, greaterThan(1500));
+    expect(String.fromCharCodes(bytes.take(4)), '%PDF');
+  });
+
   test('gera PDF mesmo quando arquivo de anexo não está disponível',
       () async {
     final bytes = await buildReportPdfBytes(

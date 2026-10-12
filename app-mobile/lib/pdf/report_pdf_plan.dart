@@ -13,7 +13,7 @@ class ReportPdfBranding {
 
   static const institutional = ReportPdfBranding(
     organization: 'Grupo Suçuarana Operações Socioambientais',
-    tagline: 'Desde 1994Preservando a Vida e o Meio Ambiente',
+    tagline: 'Desde 1994 Preservando a Vida e o Meio Ambiente',
     registrationLine:
         'CNPJ. 00.616.841.0001/28 - Utilidade Pública Lei nº 5.067/97.',
     email: 'OPERACAO.GSOS@SUSSUARANA.ORG.BR',
