@@ -6,16 +6,23 @@ import 'package:sqflite/sqflite.dart';
 
 import 'report_model.dart';
 
-class ReportStore {
+abstract interface class ReportRepository {
+  Future<List<Report>> load();
+
+  Future<void> save(List<Report> reports);
+
+  Future<void> upsert(Report report);
+}
+
+class ReportStore implements ReportRepository {
   ReportStore({
     DatabaseFactory? factory,
-    String? databasePath,
-  })  : _databaseFactory = factory ?? databaseFactory,
-        _databasePath = databasePath;
+    this._databasePath,
+  }) : _databaseFactory = factory ?? databaseFactory;
 
   static const _databaseName = 'grupo_sucuarana.db';
   static const _databaseVersion = 1;
-  static const _reportSchemaVersion = 1;
+  static const _reportSchemaVersion = 4;
   static const _table = 'reports';
 
   // Kept only to migrate installations created before SQLite became
@@ -28,6 +35,7 @@ class ReportStore {
   final String? _databasePath;
   Future<Database>? _databaseFuture;
 
+  @override
   Future<List<Report>> load() async {
     final db = await _open();
     final rows = await db.query(_table, orderBy: 'updated_at DESC');
@@ -43,30 +51,14 @@ class ReportStore {
         .toList();
   }
 
+  @override
   Future<void> save(List<Report> reports) async {
     final db = await _open();
     final incomingIds = reports.map((report) => report.id).toSet();
 
     await db.transaction((transaction) async {
       for (final report in reports) {
-        final existing = await transaction.query(
-          _table,
-          columns: const ['id'],
-          where: 'id = ?',
-          whereArgs: [report.id],
-          limit: 1,
-        );
-
-        if (existing.isEmpty) {
-          await transaction.insert(_table, _insertValues(report));
-        } else {
-          await transaction.update(
-            _table,
-            _updateValues(report),
-            where: 'id = ?',
-            whereArgs: [report.id],
-          );
-        }
+        await _upsertInTransaction(transaction, report);
       }
 
       final storedRows = await transaction.query(
@@ -84,6 +76,14 @@ class ReportStore {
         }
       }
     });
+  }
+
+  @override
+  Future<void> upsert(Report report) async {
+    final db = await _open();
+    await db.transaction(
+      (transaction) => _upsertInTransaction(transaction, report),
+    );
   }
 
   Future<void> close() async {
@@ -168,15 +168,41 @@ class ReportStore {
     await preferences.setBool(_legacyMigrationDoneKey, true);
   }
 
+  Future<void> _upsertInTransaction(
+    Transaction transaction,
+    Report report,
+  ) async {
+    final existing = await transaction.query(
+      _table,
+      columns: const ['id'],
+      where: 'id = ?',
+      whereArgs: [report.id],
+      limit: 1,
+    );
+
+    if (existing.isEmpty) {
+      await transaction.insert(_table, _insertValues(report));
+      return;
+    }
+
+    await transaction.update(
+      _table,
+      _updateValues(report),
+      where: 'id = ?',
+      whereArgs: [report.id],
+    );
+  }
+
   Map<String, Object?> _insertValues(Report report) {
-    final updatedAt = report.updatedAt.toUtc().toIso8601String();
     return {
       'id': report.id,
       'schema_version': _reportSchemaVersion,
       'payload_json': jsonEncode(report.toJson()),
+      // This column remains the transport/sync status for database v1.
+      // Report lifecycle is persisted independently inside payload_json.
       'status': report.syncStatus.name,
-      'created_at': updatedAt,
-      'updated_at': updatedAt,
+      'created_at': report.createdAt.toUtc().toIso8601String(),
+      'updated_at': report.updatedAt.toUtc().toIso8601String(),
     };
   }
 

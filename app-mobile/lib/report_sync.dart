@@ -2,6 +2,13 @@ import 'package:dio/dio.dart';
 
 import 'report_model.dart';
 
+bool isReportSyncEligible(Report report) =>
+    report.syncStatus == SyncStatus.pending &&
+    report.lifecycle == ReportLifecycle.readyForReview;
+
+List<Report> reportsEligibleForSync(Iterable<Report> reports) =>
+    reports.where(isReportSyncEligible).toList(growable: false);
+
 class ReportSync {
   ReportSync({Dio? client}) : _client = client ?? Dio();
 
