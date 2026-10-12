@@ -54,17 +54,17 @@ Future<Uint8List> buildInstitutionalReportPdf(
       header: (context) => _institutionalHeader(plan),
       footer: (context) => _institutionalFooter(plan, context),
       build: (_) => <pw.Widget>[
-        _tableOfContents(),
-        pw.NewPage(),
         _sectionHeader('1. Informações Gerais'),
         _fieldsTable(plan.generalInformation),
         pw.SizedBox(height: 12),
+        pw.NewPage(freeSpace: 100),
         _sectionHeader('2. Descrição da Ocorrência'),
         _paragraph(plan.occurrenceNarrative),
         pw.SizedBox(height: 8),
         _subsectionTitle('Dados operacionais'),
         _fieldsTable(plan.operationInformation),
         pw.SizedBox(height: 12),
+        pw.NewPage(freeSpace: 100),
         _sectionHeader('3. Desenvolvimento do emprego da equipe'),
         _paragraph(plan.developmentNarrative),
         if (plan.teams.isNotEmpty) ...[
@@ -73,14 +73,16 @@ Future<Uint8List> buildInstitutionalReportPdf(
           _teamsTable(plan.teams),
         ],
         pw.SizedBox(height: 12),
+        pw.NewPage(freeSpace: 100),
         _sectionHeader('4. Recursos Utilizados'),
         _resources(plan.resources),
         pw.SizedBox(height: 12),
+        pw.NewPage(freeSpace: 100),
         _sectionHeader('5. Conclusão'),
         _paragraph(plan.conclusion),
         pw.SizedBox(height: 12),
-        _sectionHeader('6. Anexo'),
         pw.NewPage(),
+        _sectionHeader('6. Anexo'),
         _annexHeading(
           1,
           'Formulário de buscas utilizado na triagem das informações.',
@@ -88,6 +90,7 @@ Future<Uint8List> buildInstitutionalReportPdf(
         pw.SizedBox(height: 8),
         ...plan.triageGroups.expand(
           (group) => <pw.Widget>[
+            pw.NewPage(freeSpace: 90),
             _triageGroup(group),
             pw.SizedBox(height: 8),
           ],
@@ -100,16 +103,44 @@ Future<Uint8List> buildInstitutionalReportPdf(
               : attachment.caption.trim();
           return <pw.Widget>[
             pw.NewPage(),
-            _annexHeading(annexNumber, title),
-            pw.SizedBox(height: 12),
-            _attachmentContent(
-              attachment,
-              attachmentBytes[attachment.id],
+            pw.Inseparable(
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+                children: [
+                  _annexHeading(annexNumber, title),
+                  pw.SizedBox(height: 12),
+                  _attachmentContent(
+                    attachment,
+                    attachmentBytes[attachment.id],
+                  ),
+                ],
+              ),
             ),
           ];
         }),
       ],
     ),
+  );
+
+  // Add the contents page after laying out the body, so all section outlines
+  // exist when the contents page is rendered. Insert it after the cover in the
+  // physical PDF; page labels intentionally exclude the unnumbered cover.
+  document.addPage(
+    pw.Page(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.fromLTRB(42, 88, 42, 56),
+      build: (context) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: [
+          _institutionalHeader(plan),
+          pw.SizedBox(height: 14),
+          _tableOfContents(context),
+          pw.Spacer(),
+          _institutionalFooter(plan, context),
+        ],
+      ),
+    ),
+    index: 1,
   );
 
   return document.save();
@@ -251,20 +282,58 @@ pw.Widget _cover(ReportPdfPlan plan) {
   );
 }
 
-pw.Widget _tableOfContents() => pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-      children: [
-        pw.Text(
-          'Sumário',
-          style: pw.TextStyle(
-            fontSize: 18,
-            fontWeight: pw.FontWeight.bold,
-          ),
+pw.Widget _tableOfContents(pw.Context context) {
+  final sections = context.document.outline.outlines
+      .where((outline) => outline.title != null && outline.anchor != null)
+      .toList(growable: false);
+
+  if (sections.isEmpty) {
+    throw StateError('Nenhuma seção foi registrada para o sumário.');
+  }
+
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+    children: [
+      pw.Text(
+        'Sumário',
+        style: pw.TextStyle(
+          fontSize: 18,
+          fontWeight: pw.FontWeight.bold,
         ),
-        pw.SizedBox(height: 14),
-        pw.TableOfContent(),
-      ],
-    );
+      ),
+      pw.SizedBox(height: 16),
+      ...sections.map((section) {
+        final physicalPage = int.tryParse(section.page ?? '');
+        if (physicalPage == null || physicalPage < 3) {
+          throw StateError('Página inválida na seção do sumário.');
+        }
+
+        return pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 9),
+          child: pw.Link(
+            destination: section.anchor!,
+            child: pw.Row(
+              children: [
+                pw.Expanded(
+                  child: pw.Text(
+                    section.title!,
+                    style: const pw.TextStyle(fontSize: 11),
+                  ),
+                ),
+                pw.SizedBox(width: 12),
+                // The cover is unnumbered, so page 3 in the PDF is page 2.
+                pw.Text(
+                  '${physicalPage - 1}',
+                  style: const pw.TextStyle(fontSize: 11),
+                ),
+              ],
+            ),
+          ),
+        );
+      }),
+    ],
+  );
+}
 
 pw.Widget _institutionalHeader(ReportPdfPlan plan) => pw.Column(
       children: [
@@ -567,7 +636,8 @@ pw.Widget _attachmentContent(
     crossAxisAlignment: pw.CrossAxisAlignment.stretch,
     children: [
       pw.Container(
-        height: 570,
+        // Leave enough room for captions and filenames on the same page.
+        height: 430,
         alignment: pw.Alignment.center,
         child: pw.Image(
           pw.MemoryImage(bytes),
