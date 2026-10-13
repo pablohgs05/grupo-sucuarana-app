@@ -6,6 +6,8 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../report_attachment.dart';
 import 'report_pdf_plan.dart';
+import 'report_pdf_images.dart';
+import 'report_pdf_text.dart';
 
 typedef ReportAttachmentBytesLoader = Future<Uint8List?> Function(
   ReportAttachment attachment,
@@ -32,8 +34,9 @@ Future<Uint8List> buildInstitutionalReportPdf(
 }) async {
   final attachmentBytes = <String, Uint8List?>{};
   for (final attachment in plan.attachments) {
+    final raw = await attachmentBytesLoader(attachment);
     attachmentBytes[attachment.id] =
-        await attachmentBytesLoader(attachment);
+        raw == null || raw.isEmpty ? raw : await optimizePdfImage(raw);
   }
 
   final document = pw.Document();
@@ -59,13 +62,13 @@ Future<Uint8List> buildInstitutionalReportPdf(
         pw.SizedBox(height: 12),
         pw.NewPage(freeSpace: 100),
         _sectionHeader('2. Descrição da Ocorrência'),
-        _paragraph(plan.occurrenceNarrative),
+        ..._narrativeBlocks(plan.occurrenceNarrative),
         pw.SizedBox(height: 8),
         ..._titledFields('Dados operacionais', plan.operationInformation),
         pw.SizedBox(height: 12),
         pw.NewPage(freeSpace: 100),
         _sectionHeader('3. Desenvolvimento do emprego da equipe'),
-        _paragraph(plan.developmentNarrative),
+        ..._narrativeBlocks(plan.developmentNarrative),
         if (plan.teams.isNotEmpty) ...[
           pw.SizedBox(height: 8),
           ..._titledTeams('Equipes operacionais', plan.teams),
@@ -77,7 +80,7 @@ Future<Uint8List> buildInstitutionalReportPdf(
         pw.SizedBox(height: 12),
         pw.NewPage(freeSpace: 100),
         _sectionHeader('5. Conclusão'),
-        _paragraph(plan.conclusion),
+        ..._narrativeBlocks(plan.conclusion),
         pw.SizedBox(height: 12),
         pw.NewPage(),
         _sectionHeader('6. Anexo'),
@@ -481,15 +484,24 @@ pw.Widget _fieldsTable(List<ReportPdfField> fields) => pw.Table(
           .toList(growable: false),
     );
 
-pw.Widget _paragraph(String value) => pw.Paragraph(
-      text: value,
-      textAlign: pw.TextAlign.justify,
-      style: const pw.TextStyle(
-        fontSize: 10,
-        lineSpacing: 2,
-      ),
-      margin: const pw.EdgeInsets.only(bottom: 6),
-    );
+List<pw.Widget> _narrativeBlocks(String value) =>
+    splitPdfNarrative(value)
+        .map(
+          (chunk) => pw.Inseparable(
+            child: pw.Paragraph(
+              text: safePdfText(chunk.text),
+              textAlign: pw.TextAlign.justify,
+              style: const pw.TextStyle(
+                fontSize: 10,
+                lineSpacing: 2,
+              ),
+              margin: pw.EdgeInsets.only(
+                bottom: chunk.paragraphEnd ? 6 : 0,
+              ),
+            ),
+          ),
+        )
+        .toList(growable: false);
 
 pw.Widget _teamsTable(List<ReportPdfTeam> teams) => pw.Table(
       border: pw.TableBorder.all(
@@ -590,6 +602,23 @@ List<pw.Widget> _titledFields(
 
 List<pw.Widget> _titledTeams(String title, List<ReportPdfTeam> teams) {
   if (teams.isEmpty) return const <pw.Widget>[];
+
+  // Keep short team lists together to avoid a stranded final row.
+  // Long lists retain page-spanning behavior.
+  final totalCharacters = teams.fold<int>(
+    0,
+    (sum, team) => sum + team.name.length + team.members.join(' ').length,
+  );
+  if (teams.length <= 6 && totalCharacters <= 420) {
+    return <pw.Widget>[
+      pw.Inseparable(
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+          children: [_subsectionTitle(title), _teamsTable(teams)],
+        ),
+      ),
+    ];
+  }
 
   return <pw.Widget>[
     pw.Inseparable(
