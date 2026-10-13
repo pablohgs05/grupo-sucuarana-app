@@ -12,17 +12,15 @@ Future<pw.ThemeData> loadOfflinePdfTheme() =>
 
 Future<pw.ThemeData> _buildOfflinePdfTheme() async {
   const directory = 'assets/fonts';
-  final fontBytes = await Future.wait([
-    rootBundle.load('$directory/InriaSans-Regular.ttf'),
-    rootBundle.load('$directory/InriaSans-Bold.ttf'),
-    rootBundle.load('$directory/InriaSans-Italic.ttf'),
-    rootBundle.load('$directory/InriaSans-BoldItalic.ttf'),
-  ]);
+  final regular = await rootBundle.load('$directory/InriaSans-Regular.ttf');
+  final bold = await rootBundle.load('$directory/InriaSans-Bold.ttf');
+  final italic = await rootBundle.load('$directory/InriaSans-Italic.ttf');
+  final boldItalic = await rootBundle.load('$directory/InriaSans-BoldItalic.ttf');
 
   return pw.ThemeData.withFont(
-    base: pw.Font.ttf(fontBytes[0]),
-    bold: pw.Font.ttf(fontBytes[1]),
-    italic: pw.Font.ttf(fontBytes[2]),
-    boldItalic: pw.Font.ttf(fontBytes[3]),
+    base: pw.Font.ttf(regular),
+    bold: pw.Font.ttf(bold),
+    italic: pw.Font.ttf(italic),
+    boldItalic: pw.Font.ttf(boldItalic),
   );
 }
