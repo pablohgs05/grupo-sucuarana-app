@@ -6,6 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../report_attachment.dart';
 import 'report_pdf_plan.dart';
+import 'report_pdf_fonts.dart';
 import 'report_pdf_images.dart';
 import 'report_pdf_text.dart';
 
@@ -39,7 +40,7 @@ Future<Uint8List> buildInstitutionalReportPdf(
         raw == null || raw.isEmpty ? raw : await optimizePdfImage(raw);
   }
 
-  final document = pw.Document();
+  final document = pw.Document(theme: await loadOfflinePdfTheme());
 
   document.addPage(
     pw.Page(
