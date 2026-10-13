@@ -92,6 +92,32 @@ void main() {
     expect(reports.first.id, 'older');
   });
 
+  testWidgets('home resume rascunhos e relatórios prontos', (tester) async {
+    final repository = _FakeReportRepository();
+    await tester.pumpWidget(
+      GrupoSucuaranaApp(reportRepository: repository),
+    );
+    repository.completeNext([
+      _fakeReport(
+        id: 'draft-summary',
+        updatedAt: DateTime.utc(2026, 10, 13),
+        title: 'Rascunho fictício',
+        lifecycle: ReportLifecycle.draft,
+      ),
+      _fakeReport(
+        id: 'ready-summary',
+        updatedAt: DateTime.utc(2026, 10, 13),
+        title: 'Pronto fictício',
+        lifecycle: ReportLifecycle.readyForReview,
+      ),
+    ]);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Seu trabalho neste dispositivo'), findsOneWidget);
+    expect(find.text('1 rascunho(s) • 1 pronto(s) para revisão'), findsOneWidget);
+  });
+
   testWidgets('home oferece preview para relatório revisado, não para rascunho',
       (tester) async {
     final repository = _FakeReportRepository();
