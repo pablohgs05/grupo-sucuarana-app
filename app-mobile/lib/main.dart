@@ -81,6 +81,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _edit([Report? report]) async {
+    if (_syncing) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => ReportFormPage(
@@ -104,7 +105,8 @@ class _HomePageState extends State<HomePage> {
     if (_syncing) return;
     setState(() => _syncing = true);
     try {
-      final pending = reportsEligibleForSync(_reports);
+      // Re-read persisted state before uploading to avoid stale home snapshots.
+      final pending = reportsEligibleForSync(await _store.load());
       var synced = 0;
       for (final report in pending) {
         try {
@@ -154,7 +156,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: _edit,
+          onPressed: _syncing ? null : _edit,
           icon: const Icon(Icons.add),
           label: const Text('Novo relatório'),
         ),
@@ -199,7 +201,7 @@ class _HomePageState extends State<HomePage> {
                             (report) => Card(
                               clipBehavior: Clip.antiAlias,
                               child: ListTile(
-                                onTap: () => _edit(report),
+                                onTap: _syncing ? null : () => _edit(report),
                                 leading: CircleAvatar(
                                   child: Icon(
                                     report.syncStatus == SyncStatus.synced
@@ -262,7 +264,9 @@ class _HomeSummary extends StatelessWidget {
     final drafts = reports.where(
       (report) => report.lifecycle == ReportLifecycle.draft,
     ).length;
-    final ready = reports.length - drafts;
+    final ready = reports.where(
+      (report) => report.lifecycle == ReportLifecycle.readyForReview,
+    ).length;
     final colors = Theme.of(context).colorScheme;
     return Card(
       color: colors.primaryContainer,
@@ -275,11 +279,13 @@ class _HomeSummary extends StatelessWidget {
               children: [
                 Icon(Icons.folder_copy_outlined, color: colors.onPrimaryContainer),
                 const SizedBox(width: 10),
-                Text(
+                Expanded(
+                  child: Text(
                   'Seu trabalho neste dispositivo',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: colors.onPrimaryContainer,
                     fontWeight: FontWeight.w600,
+                  ),
                   ),
                 ),
               ],
