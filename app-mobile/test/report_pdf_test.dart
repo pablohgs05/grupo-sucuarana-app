@@ -34,7 +34,8 @@ void main() {
       operationalContent: original.operationalContent.copyWith(
         occurrenceNarrative: List.filled(
           16,
-          'Narrativa fictícia extensa para exercitar a paginação do relatório.',
+          'Narrativa fictícia extensa para exercitar a paginação do relatório. '
+          'PONTUACAO — SETA → EMOJI 👽: todos caracteres do teste devem ser legíveis.',
         ).join(' '),
         developmentNarrative: List.filled(
           8,
