@@ -1,45 +1,51 @@
-/// Text shaping for the offline PDF renderer.
+/// Prepare PDF text for the four bundled Inria Sans font variants.
 ///
-/// Dart's standard PDF Helvetica fonts support WinAnsi, not arbitrary Unicode.
-/// Keep Portuguese accents intact and make unsupported code points explicit,
-/// instead of silently dropping them or drawing replacement boxes.
-/// The original report data is never modified.
+/// Portuguese accents, dashes, quotation marks, bullets and arrows remain
+/// unchanged. Rare symbols missing from the bundled font are represented by
+/// a readable fallback, never a missing-glyph box. Original data is preserved.
+/// The supported intervals are the common cmap of the four pinned font files.
+/// See assets/fonts/OFL.txt for their license.
 String safePdfText(String source) {
   final result = StringBuffer();
   for (final rune in source.runes) {
+    if (rune == 0x0A) {
+      result.write('\n');
+      continue;
+    }
+    if (rune == 0x0D) continue;
+    if (rune == 0x09 || rune == 0x00A0 || rune == 0x2007 || rune == 0x202F) {
+      result.write(' ');
+      continue;
+    }
+    if (rune == 0x200B ||
+        rune == 0x200C ||
+        rune == 0x200D ||
+        rune == 0xFE0E ||
+        rune == 0xFE0F ||
+        rune == 0xFEFF) {
+      continue;
+    }
+    if (_supportedByInria(rune)) {
+      result.writeCharCode(rune);
+      continue;
+    }
+
     switch (rune) {
-      case 0x2018: // Left curly apostrophe
-      case 0x2019: // Right curly apostrophe
-      case 0x201A:
-      case 0x201B:
-        result.write("'");
-      case 0x201C:
-      case 0x201D:
-      case 0x201E:
-      case 0x201F:
-        result.write('"');
       case 0x2010:
       case 0x2011:
       case 0x2012:
-      case 0x2013:
-      case 0x2014:
       case 0x2015:
       case 0x2212:
         result.write('-');
-      case 0x2022:
       case 0x25CF:
       case 0x25E6:
       case 0x25AA:
         result.write('-');
-      case 0x2026:
-        result.write('...');
-      case 0x2192:
       case 0x21D2:
         result.write(' -> ');
-      case 0x2190:
       case 0x21D0:
         result.write(' <- ');
-      case 0x2194:
+      case 0x21D4:
         result.write(' <-> ');
       case 0x2713:
       case 0x2714:
@@ -50,35 +56,79 @@ String safePdfText(String source) {
         result.write('[X]');
       case 0x26A0:
         result.write('[ATENCAO]');
-      case 0x00A0:
-      case 0x2007:
-      case 0x202F:
-        result.write(' ');
-      case 0x200B:
-      case 0x200C:
-      case 0x200D:
-      case 0xFE0E:
-      case 0xFE0F:
-      case 0xFEFF:
-        // Invisible joiners and presentation selectors cannot be rendered.
-        break;
       default:
-        if ((rune >= 0x20 && rune <= 0x7E) ||
-            (rune >= 0xA1 && rune <= 0xFF) ||
-            rune == 0x0A ||
-            rune == 0x09) {
-          result.writeCharCode(rune);
-        } else if (rune == 0x0D) {
-          // Ignore CR; preserve LF on Windows line endings.
-          break;
-        } else {
-          // An explicit marker preserves the code point in a readable form.
-          result.write('[U+${rune.toRadixString(16).toUpperCase()}]');
-        }
+        result.write('[U+${rune.toRadixString(16).toUpperCase()}]');
     }
   }
   return result.toString();
 }
+
+bool _supportedByInria(int codepoint) {
+  var low = 0;
+  var high = _inriaGlyphRanges.length - 1;
+  while (low <= high) {
+    final mid = (low + high) ~/ 2;
+    final range = _inriaGlyphRanges[mid];
+    if (codepoint < range.$1) {
+      high = mid - 1;
+    } else if (codepoint > range.$2) {
+      low = mid + 1;
+    } else {
+      return true;
+    }
+  }
+  return false;
+}
+
+const _inriaGlyphRanges = <(int, int)>[
+  (0xD, 0xD),
+  (0x20, 0x7E),
+  (0xA0, 0x17E),
+  (0x192, 0x192),
+  (0x218, 0x21B),
+  (0x237, 0x237),
+  (0x2C6, 0x2C7),
+  (0x2D8, 0x2DD),
+  (0x3C0, 0x3C0),
+  (0x1E80, 0x1E85),
+  (0x1E9E, 0x1E9E),
+  (0x1EF2, 0x1EF3),
+  (0x2013, 0x2014),
+  (0x2018, 0x201A),
+  (0x201C, 0x201E),
+  (0x2020, 0x2022),
+  (0x2026, 0x2026),
+  (0x2030, 0x2030),
+  (0x2039, 0x203A),
+  (0x2044, 0x2044),
+  (0x2070, 0x2070),
+  (0x2074, 0x2079),
+  (0x2080, 0x2089),
+  (0x20AC, 0x20AC),
+  (0x20B9, 0x20B9),
+  (0x2113, 0x2113),
+  (0x2116, 0x2116),
+  (0x2122, 0x2122),
+  (0x2126, 0x2126),
+  (0x212E, 0x212E),
+  (0x2153, 0x2154),
+  (0x215B, 0x215E),
+  (0x2190, 0x2199),
+  (0x2202, 0x2202),
+  (0x2206, 0x2206),
+  (0x220F, 0x220F),
+  (0x2211, 0x2212),
+  (0x2215, 0x2215),
+  (0x221A, 0x221A),
+  (0x221E, 0x221E),
+  (0x222B, 0x222B),
+  (0x2248, 0x2248),
+  (0x2260, 0x2260),
+  (0x2264, 0x2265),
+  (0x25CA, 0x25CA),
+  (0xF6C3, 0xF6C3),
+  (0xFB00, 0xFB04),
+];
 
 /// Break an extended narrative into short, inseparable layout units.
 ///
