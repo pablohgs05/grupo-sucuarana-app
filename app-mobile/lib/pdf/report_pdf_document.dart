@@ -61,16 +61,14 @@ Future<Uint8List> buildInstitutionalReportPdf(
         _sectionHeader('2. Descrição da Ocorrência'),
         _paragraph(plan.occurrenceNarrative),
         pw.SizedBox(height: 8),
-        _subsectionTitle('Dados operacionais'),
-        _fieldsTable(plan.operationInformation),
+        ..._titledFields('Dados operacionais', plan.operationInformation),
         pw.SizedBox(height: 12),
         pw.NewPage(freeSpace: 100),
         _sectionHeader('3. Desenvolvimento do emprego da equipe'),
         _paragraph(plan.developmentNarrative),
         if (plan.teams.isNotEmpty) ...[
           pw.SizedBox(height: 8),
-          _subsectionTitle('Equipes operacionais'),
-          _teamsTable(plan.teams),
+          ..._titledTeams('Equipes operacionais', plan.teams),
         ],
         pw.SizedBox(height: 12),
         pw.NewPage(freeSpace: 100),
@@ -90,9 +88,10 @@ Future<Uint8List> buildInstitutionalReportPdf(
         pw.SizedBox(height: 8),
         ...plan.triageGroups.expand(
           (group) => <pw.Widget>[
-            pw.NewPage(freeSpace: 90),
-            _triageGroup(group),
-            pw.SizedBox(height: 8),
+            // The heading and its first data row are kept together.
+            // Do not force a page break before a group: use free space.
+            ..._titledFields(group.title, group.fields),
+            pw.SizedBox(height: 6),
           ],
         ),
         ...plan.attachments.asMap().entries.expand((entry) {
@@ -459,7 +458,7 @@ pw.Widget _fieldsTable(List<ReportPdfField> fields) => pw.Table(
             (field) => pw.TableRow(
               children: [
                 pw.Container(
-                  padding: const pw.EdgeInsets.all(5),
+                  padding: const pw.EdgeInsets.all(4),
                   color: PdfColors.grey200,
                   child: pw.Text(
                     field.label,
@@ -470,7 +469,7 @@ pw.Widget _fieldsTable(List<ReportPdfField> fields) => pw.Table(
                   ),
                 ),
                 pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
+                  padding: const pw.EdgeInsets.all(4),
                   child: pw.Text(
                     field.value,
                     style: const pw.TextStyle(fontSize: 8.5),
@@ -565,13 +564,47 @@ pw.Widget _resources(List<ReportPdfResource> resources) {
   );
 }
 
-pw.Widget _triageGroup(ReportPdfGroup group) => pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.stretch,
-      children: [
-        _subsectionTitle(group.title),
-        _fieldsTable(group.fields),
-      ],
-    );
+// A bare heading at the end of a page can separate from its table when
+// MultiPage splits a Column. Keep the heading with exactly the first row while
+// leaving the remaining rows free to flow onto later pages.
+List<pw.Widget> _titledFields(
+  String title,
+  List<ReportPdfField> fields,
+) {
+  if (fields.isEmpty) return <pw.Widget>[_subsectionTitle(title)];
+
+  return <pw.Widget>[
+    pw.Inseparable(
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: [
+          _subsectionTitle(title),
+          _fieldsTable(<ReportPdfField>[fields.first]),
+        ],
+      ),
+    ),
+    if (fields.length > 1)
+      _fieldsTable(fields.skip(1).toList(growable: false)),
+  ];
+}
+
+List<pw.Widget> _titledTeams(String title, List<ReportPdfTeam> teams) {
+  if (teams.isEmpty) return const <pw.Widget>[];
+
+  return <pw.Widget>[
+    pw.Inseparable(
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.stretch,
+        children: [
+          _subsectionTitle(title),
+          _teamsTable(<ReportPdfTeam>[teams.first]),
+        ],
+      ),
+    ),
+    if (teams.length > 1)
+      _teamsTable(teams.skip(1).toList(growable: false)),
+  ];
+}
 
 pw.Widget _annexHeading(int number, String title) => pw.Container(
       width: double.infinity,

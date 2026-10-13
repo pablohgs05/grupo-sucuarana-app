@@ -107,6 +107,104 @@ void main() {
     expect(result!.editSection, 'person');
   });
 
+  testWidgets('aviso na revisão abre a seção correspondente para corrigir',
+      (tester) async {
+    ReportReviewResult? result;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () async {
+                result = await Navigator.of(context).push<ReportReviewResult>(
+                  MaterialPageRoute(
+                    builder: (_) => ReportReviewPage(
+                      report: _reviewReport(
+                        metadata: const TriageMetadata(
+                          formNumber: '',
+                          factDate: '05/10/2026',
+                          factTime: '10:00',
+                          noticeDate: '05/10/2026',
+                          noticeTime: '09:00',
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Abrir revisão com avisos'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Abrir revisão com avisos'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.byKey(const ValueKey('review-advisories')),
+      findsOneWidget,
+    );
+    expect(find.text('Pontos para conferir: 1'), findsOneWidget);
+    final fix = find.byKey(const ValueKey('review-fix-notice-before-fact'));
+    await tester.ensureVisible(fix);
+    await tester.tap(fix);
+    await tester.pumpAndSettle();
+
+    expect(result, isNotNull);
+    expect(result!.confirmed, isFalse);
+    expect(result!.editSection, 'triageMetadata');
+  });
+
+  testWidgets('avisos não impedem confirmação explícita',
+      (tester) async {
+    ReportReviewResult? result;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () async {
+                result = await Navigator.of(context).push<ReportReviewResult>(
+                  MaterialPageRoute(
+                    builder: (_) => ReportReviewPage(
+                      report: _reviewReport(
+                        physical: PhysicalDescription.empty.copyWith(
+                          age: '3000',
+                          height: '173m',
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Abrir revisão com dados improváveis'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Abrir revisão com dados improváveis'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pontos para conferir: 2'), findsOneWidget);
+    final confirm = find.byKey(const ValueKey('confirm-review'));
+    await tester.dragUntilVisible(
+      confirm,
+      find.byKey(const ValueKey('report-review-list')),
+      const Offset(0, -700),
+    );
+    await tester.tap(confirm);
+    await tester.pumpAndSettle();
+
+    expect(result, isNotNull);
+    expect(result!.confirmed, isTrue);
+  });
+
   testWidgets('confirmar revisão retorna confirmação explícita',
       (tester) async {
     ReportReviewResult? result;
@@ -152,15 +250,18 @@ void main() {
   });
 }
 
-Report _reviewReport() => Report(
+Report _reviewReport({
+  TriageMetadata? metadata,
+  PhysicalDescription? physical,
+}) => Report(
       id: 'review-report-ficticio',
       identification: Identification(
         title: 'Relatório de revisão fictício',
         date: DateTime.utc(2026, 10, 5),
         coordinator: 'Equipe fictícia',
       ),
-      searchTriage: const SearchTriage(
-        metadata: TriageMetadata(
+      searchTriage: SearchTriage(
+        metadata: metadata ?? const TriageMetadata(
           formNumber: 'FORM-REVISAO-FICTICIO',
           factDate: '05/10/2026',
           factTime: '10:00',
@@ -201,7 +302,7 @@ Report _reviewReport() => Report(
           mountReturnDetails: '',
         ),
         lastSeen: LastSeen.empty,
-        physicalDescription: PhysicalDescription.empty,
+        physicalDescription: physical ?? PhysicalDescription.empty,
         clothingAndAccessories: ClothingAndAccessories.empty,
         personalSupplies: PersonalSupplies.empty,
         healthAndBehavior: HealthAndBehavior(
