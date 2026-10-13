@@ -32,3 +32,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/fonts/InriaSans-Regular.ttf
+    - assets/fonts/InriaSans-Bold.ttf
+    - assets/fonts/InriaSans-Italic.ttf
+    - assets/fonts/InriaSans-BoldItalic.ttf
