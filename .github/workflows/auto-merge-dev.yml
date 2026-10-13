@@ -13,14 +13,18 @@ on:
 # This workflow intentionally does not check out or execute PR code.
 # pull_request_target uses the trusted workflow from the base branch.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   enable-auto-merge:
     name: Enable auto-merge
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
+    permissions:
+      # Needed to update the pull request's merge state.
+      pull-requests: write
+      # Needed by GitHub CLI to enable auto-merge.
+      contents: write
     steps:
       - name: Enable squash auto-merge when requirements are met
         env:
