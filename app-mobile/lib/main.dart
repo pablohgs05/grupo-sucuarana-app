@@ -39,6 +39,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   late final ReportRepository _store;
   final _syncService = ReportSync();
+  bool _syncing = false;
   List<Report> _reports = [];
   bool _loading = true;
   String? _loadError;
@@ -100,35 +101,42 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _sync() async {
-    final pending = reportsEligibleForSync(_reports);
-    var synced = 0;
-    for (final report in pending) {
-      try {
-        await _syncService.send(report);
-        final index = _reports.indexWhere((item) => item.id == report.id);
-        if (index >= 0) {
-          setState(() {
-            _reports = [..._reports]
-              ..[index] = report.copyWith(syncStatus: SyncStatus.synced);
-          });
+    if (_syncing) return;
+    setState(() => _syncing = true);
+    try {
+      final pending = reportsEligibleForSync(_reports);
+      var synced = 0;
+      for (final report in pending) {
+        try {
+          await _syncService.send(report);
+          final updated = report.copyWith(syncStatus: SyncStatus.synced);
+          // Persist each successful upload without replacing the whole database.
+          await _store.upsert(updated);
+          final index = _reports.indexWhere((item) => item.id == report.id);
+          if (index >= 0 && mounted) {
+            setState(() {
+              _reports = [..._reports]..[index] = updated;
+            });
+          }
+          synced++;
+        } on DioException catch (error) {
+          if (mounted) {
+            _message(
+              'Não foi possível sincronizar. API indisponível '
+              '(${error.response?.statusCode ?? 'sem conexão'}).',
+            );
+          }
+          break;
+        } catch (_) {
+          if (mounted) _message('Não foi possível sincronizar este relatório.');
+          break;
         }
-        synced++;
-      } on DioException catch (error) {
-        if (mounted) {
-          _message(
-            'Não foi possível sincronizar. API indisponível '
-            '(${error.response?.statusCode ?? 'sem conexão'}).',
-          );
-        }
-        break;
-      } catch (_) {
-        if (mounted) _message('Não foi possível sincronizar este relatório.');
-        break;
       }
-    }
-    await _store.save(_reports);
-    if (mounted && synced > 0) {
-      _message('$synced relatório(s) sincronizado(s) com a API.');
+      if (mounted && synced > 0) {
+        _message('${synced} relatório(s) sincronizado(s) com a API.');
+      }
+    } finally {
+      if (mounted) setState(() => _syncing = false);
     }
   }
 
@@ -139,8 +147,8 @@ class _HomePageState extends State<HomePage> {
           actions: [
             if (_reports.any(isReportSyncEligible))
               IconButton(
-                onPressed: _sync,
-                tooltip: 'Sincronizar',
+                onPressed: _syncing ? null : _sync,
+                tooltip: _syncing ? 'Sincronizando' : 'Sincronizar',
                 icon: const Icon(Icons.cloud_upload_outlined),
               ),
           ],
@@ -185,8 +193,11 @@ class _HomePageState extends State<HomePage> {
                             'no dispositivo',
                           ),
                           const SizedBox(height: 12),
+                          _HomeSummary(reports: _reports),
+                          const SizedBox(height: 12),
                           ..._reports.map(
                             (report) => Card(
+                              clipBehavior: Clip.antiAlias,
                               child: ListTile(
                                 onTap: () => _edit(report),
                                 leading: CircleAvatar(
@@ -238,6 +249,55 @@ class _HomePageState extends State<HomePage> {
 
   void _message(String text) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(text)));
+  }
+}
+
+class _HomeSummary extends StatelessWidget {
+  const _HomeSummary({required this.reports});
+
+  final List<Report> reports;
+
+  @override
+  Widget build(BuildContext context) {
+    final drafts = reports.where(
+      (report) => report.lifecycle == ReportLifecycle.draft,
+    ).length;
+    final ready = reports.length - drafts;
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      color: colors.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.folder_copy_outlined, color: colors.onPrimaryContainer),
+                const SizedBox(width: 10),
+                Text(
+                  'Seu trabalho neste dispositivo',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: colors.onPrimaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${drafts} rascunho(s) • ${ready} pronto(s) para revisão',
+              style: TextStyle(color: colors.onPrimaryContainer),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Os relatórios ficam salvos aqui, mesmo sem internet.',
+              style: TextStyle(color: colors.onPrimaryContainer),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
