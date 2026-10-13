@@ -92,6 +92,15 @@ def main(file_path: Path) -> int:
             if int(entry.group(1)) != expected_page_label:
                 errors.append(f"Wrong page number for {title}: {entry.group(1)} != {expected_page_label}")
 
+    # Synthetic stress marker includes punctuation and an emoji outside
+    # Helvetica's WinAnsi character repertoire. The PDF must keep a readable
+    # representation rather than substituting an invisible box.
+    text = normalized(" ".join(pages))
+    if "PONTUACAO - SETA -> EMOJI [U+1F47D]" not in text:
+        errors.append("Unicode fallback is missing or not readable in the PDF")
+    if "\ufffd" in text or "\u25a1" in text:
+        errors.append("Broken glyph replacement found in PDF extraction")
+
     for group, first_field in GROUP_FIRST_FIELDS.items():
         group_pages = []
         for number, page in enumerate(pages[2:], start=3):
