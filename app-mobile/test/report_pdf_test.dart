@@ -9,6 +9,8 @@ import 'package:grupo_sucuarana_app/report_pdf.dart';
 import 'package:grupo_sucuarana_app/search_triage.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('gera PDF institucional válido e carrega anexos por injeção',
       () async {
     final loadedIds = <String>[];
