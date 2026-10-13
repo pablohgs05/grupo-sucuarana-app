@@ -15,11 +15,13 @@ sintéticos.
 
 ## Mudanças
 
-1. O conteúdo é preservado integralmente no relatório/SQLite. Apenas a
-   representação PDF substitui pontuação incompatível por ASCII legível.
-   Símbolos não mapeados tornam-se marcadores explícitos como `[U+1F47D]`,
-   em vez de desaparecer. Isso não substitui uma futura fonte Unicode
-   offline, caso o cliente necessite renderização visual fiel de emojis.
+1. O conteúdo é preservado integralmente no relatório/SQLite. Quatro
+   variantes **Inria Sans** (SIL OFL 1.1, `app-mobile/assets/fonts/OFL.txt`)
+   são incluídas como assets da APK e embutidas no PDF, **sem internet**.
+   Acentos portugueses, travessões, aspas tipográficas, marcadores e setas
+   cobertos pela fonte são preservados visualmente. Emojis e símbolos fora
+   do repertório recebem representação legível como `[U+1F47D]`;
+   o texto original não é substituído na persistência.
 2. As narrativas são segmentadas em blocos curtos, mantidos juntos quando
    uma quebra de página ocorre. Blocos respeitam os parágrafos originais.
 3. Listas pequenas de equipes passam a ser mantidas juntas; listas grandes
