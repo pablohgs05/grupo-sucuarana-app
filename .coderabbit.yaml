@@ -1,0 +1,6 @@
+# CodeRabbit is intentionally disabled for automatic PR reviews.
+# GitHub Actions is the source of truth for merge quality gates.
+reviews:
+  request_changes_workflow: false
+  auto_review:
+    enabled: false
