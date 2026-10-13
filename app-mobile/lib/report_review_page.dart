@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'report_model.dart';
+import 'report_review_advisories.dart';
 import 'search_triage.dart';
 
 class ReportReviewResult {
@@ -26,6 +27,7 @@ class ReportReviewPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final triage = report.searchTriage;
     final operational = report.operationalContent;
+    final advisories = reviewReportAdvisories(report);
 
     final sections = <_ReviewSection>[
       _ReviewSection(
@@ -278,8 +280,59 @@ class ReportReviewPage extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
+          if (advisories.isNotEmpty) ...[
+            Card(
+              key: const ValueKey('review-advisories'),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.info_outline),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Pontos para conferir: ${advisories.length}',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Estes avisos são indicativos. Não impedem a '
+                      'confirmação e não modificam os dados preenchidos.',
+                    ),
+                    ...advisories.map(
+                      (advisory) => ListTile(
+                        key: ValueKey('review-advisory-${advisory.id}'),
+                        contentPadding: EdgeInsets.zero,
+                        dense: true,
+                        title: Text(advisory.message),
+                        trailing: TextButton(
+                          key: ValueKey('review-fix-${advisory.id}'),
+                          onPressed: () => Navigator.of(context).pop(
+                            ReportReviewResult.edit(advisory.sectionId),
+                          ),
+                          child: const Text('Conferir'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           ...sections.map(
-            (section) => _ReviewSectionCard(section: section),
+            (section) => _ReviewSectionCard(
+              section: section,
+              hasAdvisory: advisories.any(
+                (advisory) => advisory.sectionId == section.id,
+              ),
+            ),
           ),
           const SizedBox(height: 12),
           FilledButton.icon(
@@ -423,9 +476,13 @@ class ReportReviewPage extends StatelessWidget {
 }
 
 class _ReviewSectionCard extends StatelessWidget {
-  const _ReviewSectionCard({required this.section});
+  const _ReviewSectionCard({
+    required this.section,
+    required this.hasAdvisory,
+  });
 
   final _ReviewSection section;
+  final bool hasAdvisory;
 
   @override
   Widget build(BuildContext context) => Card(
@@ -438,6 +495,14 @@ class _ReviewSectionCard extends StatelessWidget {
             children: [
               Row(
                 children: [
+                  if (hasAdvisory) ...[
+                    const Icon(
+                      Icons.info_outline,
+                      size: 20,
+                      semanticLabel: 'Ponto para conferir',
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   Expanded(
                     child: Text(
                       section.title,
