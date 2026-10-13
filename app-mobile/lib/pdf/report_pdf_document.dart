@@ -160,7 +160,7 @@ pw.Widget _cover(ReportPdfPlan plan) {
     crossAxisAlignment: pw.CrossAxisAlignment.stretch,
     children: [
       pw.Text(
-        'Nome: ${plan.coordinator}',
+        safePdfText('Nome: ${plan.coordinator}'),
         textAlign: pw.TextAlign.center,
         style: pw.TextStyle(
           fontSize: 12,
@@ -170,7 +170,7 @@ pw.Widget _cover(ReportPdfPlan plan) {
       ),
       pw.SizedBox(height: 28),
       pw.Text(
-        plan.title,
+        safePdfText(plan.title),
         textAlign: pw.TextAlign.center,
         style: pw.TextStyle(
           fontSize: 18,
@@ -181,7 +181,7 @@ pw.Widget _cover(ReportPdfPlan plan) {
       if (referenceLine != null) ...[
         pw.SizedBox(height: 8),
         pw.Text(
-          referenceLine,
+          safePdfText(referenceLine),
           textAlign: pw.TextAlign.center,
           style: pw.TextStyle(
             fontSize: 12,
@@ -241,7 +241,7 @@ pw.Widget _cover(ReportPdfPlan plan) {
       if (formLine != null) ...[
         pw.SizedBox(height: 5),
         pw.Text(
-          formLine,
+          safePdfText(formLine),
           textAlign: pw.TextAlign.center,
           style: pw.TextStyle(
             fontSize: 11,
@@ -252,7 +252,7 @@ pw.Widget _cover(ReportPdfPlan plan) {
       ],
       pw.SizedBox(height: 26),
       pw.Text(
-        plan.branding.organization,
+        safePdfText(plan.branding.organization),
         textAlign: pw.TextAlign.center,
         style: pw.TextStyle(
           fontSize: 14,
@@ -262,7 +262,7 @@ pw.Widget _cover(ReportPdfPlan plan) {
       ),
       pw.SizedBox(height: 5),
       pw.Text(
-        plan.location,
+        safePdfText(plan.location),
         textAlign: pw.TextAlign.center,
         style: pw.TextStyle(
           fontSize: 12,
@@ -272,7 +272,7 @@ pw.Widget _cover(ReportPdfPlan plan) {
       ),
       pw.SizedBox(height: 5),
       pw.Text(
-        plan.monthYearLabel,
+        safePdfText(plan.monthYearLabel),
         textAlign: pw.TextAlign.center,
         style: pw.TextStyle(
           fontSize: 12,
@@ -318,7 +318,7 @@ pw.Widget _tableOfContents(pw.Context context) {
               children: [
                 pw.Expanded(
                   child: pw.Text(
-                    section.title!,
+                    safePdfText(section.title!),
                     style: const pw.TextStyle(fontSize: 11),
                   ),
                 ),
@@ -340,7 +340,7 @@ pw.Widget _tableOfContents(pw.Context context) {
 pw.Widget _institutionalHeader(ReportPdfPlan plan) => pw.Column(
       children: [
         pw.Text(
-          plan.branding.organization,
+          safePdfText(plan.branding.organization),
           textAlign: pw.TextAlign.center,
           style: pw.TextStyle(
             fontSize: 12,
@@ -350,7 +350,7 @@ pw.Widget _institutionalHeader(ReportPdfPlan plan) => pw.Column(
         ),
         pw.SizedBox(height: 2),
         pw.Text(
-          '"${plan.branding.tagline}"',
+          safePdfText('"${plan.branding.tagline}"'),
           textAlign: pw.TextAlign.center,
           style: pw.TextStyle(
             fontSize: 8,
@@ -360,7 +360,7 @@ pw.Widget _institutionalHeader(ReportPdfPlan plan) => pw.Column(
         ),
         pw.SizedBox(height: 2),
         pw.Text(
-          plan.branding.registrationLine,
+          safePdfText(plan.branding.registrationLine),
           textAlign: pw.TextAlign.center,
           style: pw.TextStyle(
             fontSize: 7.5,
@@ -369,12 +369,12 @@ pw.Widget _institutionalHeader(ReportPdfPlan plan) => pw.Column(
         ),
         pw.SizedBox(height: 4),
         pw.Text(
-          'E-MAIL: ${plan.branding.email}',
+          safePdfText('E-MAIL: ${plan.branding.email}'),
           textAlign: pw.TextAlign.center,
           style: const pw.TextStyle(fontSize: 7),
         ),
         pw.Text(
-          'SITE: ${plan.branding.siteLine}',
+          safePdfText('SITE: ${plan.branding.siteLine}'),
           textAlign: pw.TextAlign.center,
           style: const pw.TextStyle(fontSize: 7),
         ),
@@ -400,8 +400,8 @@ pw.Widget _institutionalFooter(
         children: [
           pw.Expanded(
             child: pw.Text(
-              'E-MAIL: ${plan.branding.email}\n'
-              'SITE: ${plan.branding.siteLine}',
+              safePdfText('E-MAIL: ${plan.branding.email}\n'
+                  'SITE: ${plan.branding.siteLine}'),
               style: const pw.TextStyle(
                 fontSize: 6.5,
                 color: PdfColors.grey600,
