@@ -1,0 +1,6 @@
+# CodeRabbit automatic reviews are disabled; GitHub Actions enforces merge quality gates.
+language: pt-BR
+reviews:
+  request_changes_workflow: false
+  auto_review:
+    enabled: false
