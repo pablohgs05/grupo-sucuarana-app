@@ -1,68 +1,120 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
 language: "pt-BR"
+tone_instructions: "Fale como dois devs parceiros: direto, amigável e com humor leve/KKK quando couber. Em segurança, perda de dados e bugs críticos, seja sério e específico. Sem corporativês, sem zoar pessoas."
 early_access: false
 enable_free_tier: true
 
 reviews:
   profile: "assertive"
-  request_changes_workflow: false
+  request_changes_workflow: true
+  allow_author_approval: false
   high_level_summary: true
+  high_level_summary_instructions: |
+    Escreva um resumo curto em português brasileiro, com linguagem natural e descontraída.
+    Explique o que mudou, por que importa e como foi validado. Pode usar uma piada leve quando combinar, sem forçar meme.
+    Não invente testes, funcionalidades, segurança ou resultados que não foram comprovados.
+    Destaque riscos, limitações e tarefas pendentes. Para releases, use bullets claros e um toque de humor Suçuarana sem esconder breaking changes.
   high_level_summary_in_walkthrough: true
   review_status: true
+  review_progress: true
   commit_status: true
-  poem: false
+  fail_commit_status: true
+  review_details: true
   collapse_walkthrough: true
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
   path_filters: []
   path_instructions:
     - path: "app-mobile/**/*.dart"
       instructions: |
-        Review this Flutter/Dart application as a reliability-focused offline-first mobile app.
-        Check correctness, null safety, async lifecycle and mounted checks, resource disposal, error/loading states, accessibility, and Riverpod state ownership.
-        Preserve the existing presentation/application/domain/data/services boundaries and avoid introducing unnecessary architecture or dependencies.
-        The core report workflow must work without internet: persist locally before network calls, never lose drafts or attachments on failures, and make retries safe.
-        Check SQLite consistency, migrations, serialization, date/time handling, image/file lifecycle, PDF generation, pagination, and memory use where relevant.
-        Require focused tests for new behavior and regression tests for bugs. Prefer deterministic tests with fakes/mocks; do not rely on real network, real user data, or flaky timing.
-        Do not claim a feature is implemented when it is only documented or stubbed. Explain concrete impact and give actionable fixes.
+        Revise como um app Flutter/Dart offline-first que pode guardar relatórios operacionais e fotos potencialmente sensíveis.
+        Priorize bugs reais, perda/corrupção de dados, condições de corrida, null safety, async lifecycle, mounted checks, descarte de recursos, estados loading/error, acessibilidade e ownership do estado Riverpod.
+        O fluxo principal deve funcionar sem internet. Persistir localmente antes de qualquer rede; falhas de sync nunca podem apagar ou invalidar o rascunho/anexos. Retentativas precisam ser seguras e não duplicar relatórios.
+        Examine SQLite, migrações, serialização, datas/timezones, ciclo de vida de imagens/arquivos, PDF, paginação e memória quando relevantes.
+        Peça testes focados para comportamento novo e regressões; prefira fakes determinísticos. Não exija arquitetura nova ou dependências sem benefício claro.
+        Não trate documentação, TODO ou stub como funcionalidade pronta. Explique impacto e correção concreta.
     - path: "app-mobile/**/*test.dart"
       instructions: |
-        Review tests for meaningful behavioral assertions, edge cases, failure paths, and regression coverage rather than line coverage alone.
-        Prefer deterministic unit/widget tests with controlled fakes and mocks. Avoid real network calls, production data, unnecessary sleeps, and assertions that merely mirror implementation details.
-        For offline-first flows, cover persistence before sync, retry after transient failure, duplicate submission/idempotency, and preservation of local data when sync fails whenever applicable.
+        Procure testes que realmente validem comportamento, limites e caminhos de falha, não apenas cobertura de linhas.
+        Prefira testes determinísticos, sem rede real, dados de campo, sleeps desnecessários ou dependência da ordem de execução.
+        Quando aplicável, cubra persistência antes da sincronização, falha transitória e retry, envio duplicado/idempotência, anexos preservados e recuperação de erro.
     - path: "backend/**/*.java"
       instructions: |
-        Review the Spring Boot API for correctness, secure defaults, input validation, authorization boundaries, exception handling, transaction boundaries, and safe database access.
-        Treat JWT authentication and authorization as not implemented unless the code actually enforces them; never assume a public endpoint is protected by documentation alone.
-        Check DTO/entity separation, validation of request bodies, idempotent report synchronization, duplicate and race conditions, and safe handling of malformed or oversized input.
-        Never expose secrets, tokens, personal data, victim details, stack traces, database internals, or environment configuration in logs or API responses.
-        Check that health endpoints expose only minimal technical status. Require focused JUnit/Spring tests for success, invalid input, authorization, persistence, retries, and duplicate requests as applicable.
+        Revise a API Spring Boot por correção, validação de entrada, autorização, limites de confiança, tratamento seguro de erros, transações e acesso ao banco.
+        Nunca presuma que JWT/autorização existem só porque estão documentados: confirme no código. Para endpoints que expõem ou alteram relatórios/dados pessoais, sinalize ausência de autenticação/autorização como bloqueador antes de uso real.
+        Confira DTOs separados de entidades, validação de request bodies, sync idempotente, duplicidade/concorrência, entradas malformadas ou grandes e respostas seguras.
+        Nunca exponha tokens, segredos, dados pessoais, fotos, detalhes de vítimas, stack traces ou configuração interna em logs/respostas. Health check deve expor só status técnico mínimo.
+        Exija testes JUnit/Spring focados para sucesso, entrada inválida, autorização, persistência, idempotência e erros, conforme o comportamento alterado.
     - path: "backend/**/*Test.java"
       instructions: |
-        Review tests for behavior and security, not just successful happy paths.
-        Prefer deterministic JUnit/Spring tests with isolated data and explicit assertions. Cover invalid input, missing or insufficient authorization where applicable, duplicate/idempotent requests, persistence behavior, and safe error responses.
-        Do not use real credentials, personal data, external production services, or order-dependent shared state.
+        Avalie o que os testes provam, incluindo caminhos negativos e de segurança, não apenas happy path.
+        Prefira testes JUnit/Spring determinísticos e isolados. Cubra entradas inválidas, autorização ausente/insuficiente quando aplicável, duplicidade/idempotência, persistência e respostas seguras.
+        Nunca use credenciais reais, dados pessoais ou serviços de produção.
     - path: "docs/**"
       instructions: |
-        Check documentation against the actual code and CI configuration; flag claims that describe planned work as already implemented.
-        Preserve the project's explicit offline-first, local-first privacy, idempotent synchronization, and LGPD principles. Call out security prerequisites and production blockers clearly.
-        Never include real operational reports, victim details, personal data, photos, secrets, tokens, or private environment values.
+        Compare a documentação com o código e CI atuais. Sinalize quando algo planejado, TODO ou stub for descrito como implementado.
+        Preserve offline-first, privacidade local, sync idempotente e LGPD. Deixe bloqueadores de produção explícitos.
+        Não inclua relatórios reais, fotos de campo, dados pessoais, segredos, tokens ou valores de ambiente privados.
     - path: ".github/workflows/**"
       instructions: |
-        Review GitHub Actions for least-privilege permissions, untrusted pull request code execution, secret exposure, unsafe expression interpolation, dependency/action pinning, and whether failures actually block the intended workflow.
-        Be especially careful with pull_request_target: do not check out or execute pull request head code in a privileged workflow.
-        Ensure CI runs the relevant Flutter analysis/tests and backend tests, and do not treat a successful build as a substitute for tests or security review.
+        Revise permissões mínimas, execução de código não confiável de PR, exposição de secrets, interpolação insegura de expressões, actions/dependências e se falhas realmente bloqueiam o fluxo.
+        Em pull_request_target, nunca faça checkout nem execute código do head do PR em contexto privilegiado.
+        Confirme que mudanças de CI não removem análise/testes Flutter, testes backend, CodeQL ou revisão de dependências sem justificativa e alternativa equivalente.
+
+  pre_merge_checks:
+    title:
+      mode: "error"
+      requirements: |
+        O título deve ser curto, descrever a mudança e usar um prefixo convencional coerente, como feat:, fix:, test:, docs:, ci: ou chore:. Evite títulos vagos como "updates" ou "fix stuff".
+    description:
+      mode: "error"
+      requirements: |
+        A descrição deve informar contexto/problema, solução, riscos relevantes e testes executados ou motivo para não haver testes.
+        Para mudança visual, inclua evidência quando viável. Declare breaking changes, alterações de configuração e migrações quando existirem.
+        Nunca afirme que testes passaram sem evidência; PRs de documentação/configuração podem explicar que não alteram comportamento de runtime.
+    custom_checks:
+      - name: "Segurança e privacidade"
+        mode: "error"
+        instructions: |
+          PASS se as mudanças não introduzem vulnerabilidade crítica/alta plausível, segredo/token real, dado pessoal ou operacional sensível em código, logs, fixtures, screenshots, documentação ou comentários.
+          FAIL se houver segredo ou dado sensível real, bypass de autenticação/autorização, exposição indevida de dados, validação de entrada perigosa, injeção, execução de código não confiável ou permissão excessiva introduzida pela mudança.
+          Para endpoints que leem/escrevem relatórios ou dados pessoais, verifique controles reais no código; não aceite documentação como proteção. Se a mudança for apenas docs/config sem impacto de segurança, passe.
+          Baseie o resultado em evidência do diff; não invente vulnerabilidades hipotéticas sem caminho de exploração plausível.
+      - name: "Testes e regressões"
+        mode: "error"
+        instructions: |
+          PASS se a mudança de comportamento tem testes automatizados relevantes ou se a mudança é apenas documentação, metadados ou configuração sem comportamento executável.
+          FAIL se lógica de runtime mudar sem teste apropriado, se um teste relevante for removido/enfraquecido sem substituição, ou se os testes novos forem triviais e não verificarem o comportamento declarado.
+          Para bugs corrigidos, prefira teste de regressão. Para falhas externas, valide comportamento de erro. Não exija teste unitário para cada linha nem bloqueie refatoração sem mudança comportamental quando os testes existentes cobrem o contrato.
+      - name: "Integridade offline-first"
+        mode: "error"
+        instructions: |
+          Aplique este check somente quando o diff afetar o app mobile, persistência local, anexos, geração de PDF ou sincronização.
+          PASS se salvar localmente continua independente da rede, falhas não perdem rascunhos/anexos e retries não criam duplicatas.
+          FAIL se o fluxo principal passa a depender de internet, se uma falha de rede pode apagar/corromper dados locais, se o sync pode duplicar registros ou se recursos/arquivos podem ser perdidos sem recuperação.
+          Para mudanças que não tocam esses fluxos, passe. Não exija features ainda fora do escopo do MVP.
+      - name: "Segurança de CI/CD"
+        mode: "error"
+        instructions: |
+          Aplique este check somente quando o diff afetar workflows, permissões de CI, scripts de build/deploy ou automação de merge.
+          PASS se permissões são mínimas, código de PR não confiável não roda em contexto privilegiado e falhas críticas realmente impedem merge.
+          FAIL se houver pull_request_target inseguro, secrets expostos, shell injection por dados do evento, permissões write desnecessárias ou bypass de checks/branch protection.
+          Para mudanças fora de CI/CD, passe.
 
   auto_review:
     enabled: true
     auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
     drafts: false
     base_branches:
       - "main"
       - "dev"
-    ignore_title_keywords:
-      - "wip"
-      - "skip-ci"
 
 knowledge_base:
+  opt_out: false
+  web_search:
+    enabled: true
   code_guidelines:
     enabled: true
     filePatterns:
