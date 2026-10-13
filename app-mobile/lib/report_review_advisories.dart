@@ -28,7 +28,7 @@ List<ReviewAdvisory> reviewReportAdvisories(Report report) {
   void checkDate(String field, String value) {
     if (value.trim().isNotEmpty && validateDateInput(value) != null) {
       warnings.add(ReviewAdvisory(
-        id: field + '-format',
+        id: '${field}-format',
         sectionId: 'triageMetadata',
         message: field == 'fact-date'
             ? 'Confira a data do fato: formato ou dia inválido.'
@@ -40,7 +40,7 @@ List<ReviewAdvisory> reviewReportAdvisories(Report report) {
   void checkTime(String field, String value) {
     if (value.trim().isNotEmpty && validateTimeInput(value) != null) {
       warnings.add(ReviewAdvisory(
-        id: field + '-format',
+        id: '${field}-format',
         sectionId: 'triageMetadata',
         message: field == 'fact-time'
             ? 'Confira o horário do fato: use HH:MM válido.'
