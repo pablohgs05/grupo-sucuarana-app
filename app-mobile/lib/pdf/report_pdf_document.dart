@@ -423,7 +423,7 @@ pw.Widget _institutionalFooter(
 
 pw.Widget _sectionHeader(String title) => pw.Header(
       level: 0,
-      text: title,
+      text: safePdfText(title),
       margin: const pw.EdgeInsets.only(bottom: 8),
       textStyle: pw.TextStyle(
         fontSize: 14,
@@ -439,7 +439,7 @@ pw.Widget _subsectionTitle(String title) => pw.Container(
       ),
       color: PdfColors.grey300,
       child: pw.Text(
-        title,
+        safePdfText(title),
         style: pw.TextStyle(
           fontSize: 9.5,
           fontWeight: pw.FontWeight.bold,
@@ -464,7 +464,7 @@ pw.Widget _fieldsTable(List<ReportPdfField> fields) => pw.Table(
                   padding: const pw.EdgeInsets.all(4),
                   color: PdfColors.grey200,
                   child: pw.Text(
-                    field.label,
+                    safePdfText(field.label),
                     style: pw.TextStyle(
                       fontSize: 8.5,
                       fontWeight: pw.FontWeight.bold,
@@ -474,7 +474,7 @@ pw.Widget _fieldsTable(List<ReportPdfField> fields) => pw.Table(
                 pw.Padding(
                   padding: const pw.EdgeInsets.all(4),
                   child: pw.Text(
-                    field.value,
+                    safePdfText(field.value),
                     style: const pw.TextStyle(fontSize: 8.5),
                   ),
                 ),
@@ -520,7 +520,7 @@ pw.Widget _teamsTable(List<ReportPdfTeam> teams) => pw.Table(
                   padding: const pw.EdgeInsets.all(5),
                   color: PdfColors.grey200,
                   child: pw.Text(
-                    team.name,
+                    safePdfText(team.name),
                     style: pw.TextStyle(
                       fontSize: 8.5,
                       fontWeight: pw.FontWeight.bold,
@@ -530,9 +530,9 @@ pw.Widget _teamsTable(List<ReportPdfTeam> teams) => pw.Table(
                 pw.Padding(
                   padding: const pw.EdgeInsets.all(5),
                   child: pw.Text(
-                    team.members.isEmpty
+                    safePdfText(team.members.isEmpty
                         ? 'Não informado'
-                        : team.members.join(', '),
+                        : team.members.join(', ')),
                     style: const pw.TextStyle(fontSize: 8.5),
                   ),
                 ),
@@ -568,7 +568,7 @@ pw.Widget _resources(List<ReportPdfResource> resources) {
       return pw.Padding(
         padding: const pw.EdgeInsets.only(bottom: 5),
         child: pw.Text(
-          '- ${text.isEmpty ? 'Não informado' : text}',
+          safePdfText('- ${text.isEmpty ? 'Não informado' : text}'),
           style: const pw.TextStyle(fontSize: 10),
         ),
       );
@@ -648,7 +648,7 @@ pw.Widget _annexHeading(int number, String title) => pw.Container(
         ),
       ),
       child: pw.Text(
-        'Anexo ${number.toString().padLeft(2, '0')} - $title',
+        safePdfText('Anexo ${number.toString().padLeft(2, '0')} - $title'),
         textAlign: pw.TextAlign.center,
         style: pw.TextStyle(
           fontSize: 11,
@@ -674,7 +674,7 @@ pw.Widget _attachmentContent(
         mainAxisAlignment: pw.MainAxisAlignment.center,
         children: [
           pw.Text(
-            attachment.originalName,
+            safePdfText(attachment.originalName),
             style: pw.TextStyle(
               fontSize: 11,
               fontWeight: pw.FontWeight.bold,
@@ -709,7 +709,7 @@ pw.Widget _attachmentContent(
       if (attachment.caption.trim().isNotEmpty) ...[
         pw.SizedBox(height: 8),
         pw.Text(
-          attachment.caption.trim(),
+          safePdfText(attachment.caption.trim()),
           textAlign: pw.TextAlign.center,
           style: pw.TextStyle(
             fontSize: 9,
@@ -719,7 +719,7 @@ pw.Widget _attachmentContent(
       ],
       pw.SizedBox(height: 4),
       pw.Text(
-        attachment.originalName,
+        safePdfText(attachment.originalName),
         textAlign: pw.TextAlign.center,
         style: const pw.TextStyle(
           fontSize: 7,
