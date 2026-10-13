@@ -133,7 +133,7 @@ class _HomePageState extends State<HomePage> {
         }
       }
       if (mounted && synced > 0) {
-        _message('${synced} relatório(s) sincronizado(s) com a API.');
+        _message('$synced relatório(s) sincronizado(s) com a API.');
       }
     } finally {
       if (mounted) setState(() => _syncing = false);
@@ -286,7 +286,7 @@ class _HomeSummary extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              '${drafts} rascunho(s) • ${ready} pronto(s) para revisão',
+              '$drafts rascunho(s) • $ready pronto(s) para revisão',
               style: TextStyle(color: colors.onPrimaryContainer),
             ),
             const SizedBox(height: 4),
