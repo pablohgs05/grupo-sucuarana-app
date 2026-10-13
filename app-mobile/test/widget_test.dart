@@ -100,11 +100,13 @@ void main() {
     repository.completeNext([
       _fakeReport(
         id: 'draft-summary',
+        updatedAt: DateTime.utc(2026, 10, 13),
         title: 'Rascunho fictício',
         lifecycle: ReportLifecycle.draft,
       ),
       _fakeReport(
         id: 'ready-summary',
+        updatedAt: DateTime.utc(2026, 10, 13),
         title: 'Pronto fictício',
         lifecycle: ReportLifecycle.readyForReview,
       ),
