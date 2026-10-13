@@ -15,16 +15,22 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: auto-merge-dev-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   enable-auto-merge:
     name: Enable auto-merge
-    if: github.event.pull_request.draft == false
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     permissions:
-      # Needed to update the pull request's merge state.
-      pull-requests: write
       # Needed by GitHub CLI to enable auto-merge.
       contents: write
+      # Needed to update the pull request's merge state.
+      pull-requests: write
     steps:
       - name: Enable squash auto-merge when requirements are met
         env:
