@@ -473,29 +473,50 @@ class _ReportFormPageState extends State<ReportFormPage>
   }
 
   Future<void> _removeAttachment(int index) async {
-    final removed = _attachments[index];
-
-    setState(() => _attachments.removeAt(index));
-    _scheduleAutosave(contentChanged: true);
-
-    final saved = await _persistDraft();
-    if (!saved) {
-      if (mounted) {
-        setState(() => _attachments.insert(index, removed));
-        _scheduleAutosave(contentChanged: true);
-        _message('Não foi possível remover o anexo com segurança.');
-      }
+    if (_removingAttachment ||
+        _leaving ||
+        index < 0 ||
+        index >= _attachments.length) {
       return;
     }
 
+    // Fast repeated taps used to remove an item by its now-stale index.
+    // Complete the database write (and rollback on failure) before allowing
+    // another removal or reorder.
+    final done = Completer<void>();
+    _removingAttachment = true;
+    _removalDone = done;
+
     try {
-      await _attachmentStorage.delete(removed);
-    } catch (_) {
-      if (mounted) {
-        _message(
-          'Anexo removido do relatório, mas o arquivo local não pôde ser limpo.',
-        );
+      final removed = _attachments[index];
+
+      setState(() => _attachments.removeAt(index));
+      _scheduleAutosave(contentChanged: true);
+
+      final saved = await _persistDraft();
+      if (!saved) {
+        if (mounted) {
+          setState(() => _attachments.insert(index, removed));
+          _scheduleAutosave(contentChanged: true);
+          _message('Não foi possível remover o anexo com segurança.');
+        }
+        return;
       }
+
+      try {
+        await _attachmentStorage.delete(removed);
+      } catch (_) {
+        if (mounted) {
+          _message(
+            'Anexo removido do relatório, mas o arquivo local não pôde ser limpo.',
+          );
+        }
+      }
+    } finally {
+      _removingAttachment = false;
+      _removalDone = null;
+      if (mounted) setState(() {});
+      done.complete();
     }
   }
 
@@ -505,7 +526,12 @@ class _ReportFormPageState extends State<ReportFormPage>
   }
 
   void _moveAttachment(int from, int to) {
-    if (to < 0 || to >= _attachments.length || from == to) return;
+    if (_removingAttachment ||
+        to < 0 ||
+        to >= _attachments.length ||
+        from == to) {
+      return;
+    }
 
     setState(() {
       final item = _attachments.removeAt(from);
@@ -675,7 +701,7 @@ class _ReportFormPageState extends State<ReportFormPage>
             Align(
               alignment: Alignment.centerLeft,
               child: OutlinedButton.icon(
-                onPressed: _attach,
+                onPressed: _removingAttachment ? null : _attach,
                 icon: const Icon(Icons.attach_file),
                 label: const Text('Adicionar imagem'),
               ),
@@ -701,7 +727,7 @@ class _ReportFormPageState extends State<ReportFormPage>
                               ),
                               IconButton(
                                 tooltip: 'Mover para cima',
-                                onPressed: entry.key == 0
+                                onPressed: _removingAttachment || entry.key == 0
                                     ? null
                                     : () => _moveAttachment(
                                           entry.key,
@@ -712,7 +738,8 @@ class _ReportFormPageState extends State<ReportFormPage>
                               IconButton(
                                 tooltip: 'Mover para baixo',
                                 onPressed:
-                                    entry.key == _attachments.length - 1
+                                    _removingAttachment ||
+                                            entry.key == _attachments.length - 1
                                         ? null
                                         : () => _moveAttachment(
                                               entry.key,
@@ -722,9 +749,11 @@ class _ReportFormPageState extends State<ReportFormPage>
                               ),
                               IconButton(
                                 tooltip: 'Remover anexo',
-                                onPressed: () => unawaited(
-                                  _removeAttachment(entry.key),
-                                ),
+                                onPressed: _removingAttachment
+                                    ? null
+                                    : () => unawaited(
+                                          _removeAttachment(entry.key),
+                                        ),
                                 icon: const Icon(Icons.delete_outline),
                               ),
                             ],
