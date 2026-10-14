@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'report_form_page.dart';
@@ -8,6 +9,12 @@ import 'report_store.dart';
 import 'report_sync.dart';
 
 export 'report_form_page.dart';
+
+// The demonstration backend still exposes report endpoints without
+// authentication. Sync must never appear in production or field-test APKs.
+// Fake-data integration runs can explicitly opt in to a debug build.
+const bool _developmentSyncEnabled =
+    !kReleaseMode && bool.fromEnvironment('ENABLE_EXPERIMENTAL_SYNC');
 
 void main() => runApp(const GrupoSucuaranaApp());
 
@@ -102,7 +109,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _sync() async {
-    if (_syncing) return;
+    if (!_developmentSyncEnabled || _syncing) return;
     setState(() => _syncing = true);
     try {
       // Re-read persisted state before uploading to avoid stale home snapshots.
@@ -147,7 +154,7 @@ class _HomePageState extends State<HomePage> {
         appBar: AppBar(
           title: const Text('Grupo Suçuarana'),
           actions: [
-            if (_reports.any(isReportSyncEligible))
+            if (_developmentSyncEnabled && _reports.any(isReportSyncEligible))
               IconButton(
                 onPressed: _syncing ? null : _sync,
                 tooltip: _syncing ? 'Sincronizando' : 'Sincronizar',
