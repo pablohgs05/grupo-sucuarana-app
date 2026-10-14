@@ -18,6 +18,7 @@ dependencies:
   pdf: ^3.10.8
   printing: ^5.12.0
   image_picker: ^1.1.2
+  image: ^4.5.4
   connectivity_plus: ^7.3.2
   uuid: ^4.4.0
   shared_preferences: ^2.5.3
@@ -31,3 +32,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/fonts/InriaSans-Regular.ttf
+    - assets/fonts/InriaSans-Bold.ttf
+    - assets/fonts/InriaSans-Italic.ttf
+    - assets/fonts/InriaSans-BoldItalic.ttf

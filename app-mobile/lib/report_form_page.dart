@@ -431,7 +431,12 @@ class _ReportFormPageState extends State<ReportFormPage>
 
   Future<void> _attach() async {
     try {
-      final image = await _picker.pickImage(source: ImageSource.gallery);
+      final image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1800,
+      maxHeight: 1800,
+      imageQuality: 80,
+    );
       if (image == null) return;
 
       final attachment = await _attachmentStorage.persistImage(
