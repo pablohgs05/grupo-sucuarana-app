@@ -824,7 +824,8 @@ class _ControlledReportRepository implements ReportRepository {
   @override
   Future<void> upsert(Report report) async {
     calls++;
-    if (calls == 1 && gate != null) await gate!.future;
+    final pending = gate;
+    if (calls == 1 && pending != null) await pending.future;
     if (calls == 1 && failFirst) {
       throw StateError('Falha de gravação fictícia');
     }
