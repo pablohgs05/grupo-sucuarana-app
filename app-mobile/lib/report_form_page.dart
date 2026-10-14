@@ -144,6 +144,9 @@ class _ReportFormPageState extends State<ReportFormPage>
   bool _saving = false;
   bool _hasSaved = false;
   String? _saveError;
+  bool _leaving = false;
+  bool _removingAttachment = false;
+  Completer<void>? _removalDone;
 
   static const _fields = <String, String>{
     'title': 'Título do relatório',
@@ -410,9 +413,21 @@ class _ReportFormPageState extends State<ReportFormPage>
   }
 
   Future<void> _leaveForm() async {
-    final saved = await _persistDraft();
-    if (saved && mounted) {
-      Navigator.of(context).pop();
+    if (!mounted || _leaving) return;
+
+    // Android Back uses the same durable-save gate as the visible Sair button.
+    // A second back request cannot pop the route during the first save.
+    setState(() => _leaving = true);
+    try {
+      final removal = _removalDone;
+      if (removal != null) await removal.future;
+
+      final saved = await _persistDraft();
+      if (saved && mounted) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      if (mounted) setState(() => _leaving = false);
     }
   }
 
@@ -458,29 +473,50 @@ class _ReportFormPageState extends State<ReportFormPage>
   }
 
   Future<void> _removeAttachment(int index) async {
-    final removed = _attachments[index];
-
-    setState(() => _attachments.removeAt(index));
-    _scheduleAutosave(contentChanged: true);
-
-    final saved = await _persistDraft();
-    if (!saved) {
-      if (mounted) {
-        setState(() => _attachments.insert(index, removed));
-        _scheduleAutosave(contentChanged: true);
-        _message('Não foi possível remover o anexo com segurança.');
-      }
+    if (_removingAttachment ||
+        _leaving ||
+        index < 0 ||
+        index >= _attachments.length) {
       return;
     }
 
+    // Fast repeated taps used to remove an item by its now-stale index.
+    // Complete the database write (and rollback on failure) before allowing
+    // another removal or reorder.
+    final done = Completer<void>();
+    _removingAttachment = true;
+    _removalDone = done;
+
     try {
-      await _attachmentStorage.delete(removed);
-    } catch (_) {
-      if (mounted) {
-        _message(
-          'Anexo removido do relatório, mas o arquivo local não pôde ser limpo.',
-        );
+      final removed = _attachments[index];
+
+      setState(() => _attachments.removeAt(index));
+      _scheduleAutosave(contentChanged: true);
+
+      final saved = await _persistDraft();
+      if (!saved) {
+        if (mounted) {
+          setState(() => _attachments.insert(index, removed));
+          _scheduleAutosave(contentChanged: true);
+          _message('Não foi possível remover o anexo com segurança.');
+        }
+        return;
       }
+
+      try {
+        await _attachmentStorage.delete(removed);
+      } catch (_) {
+        if (mounted) {
+          _message(
+            'Anexo removido do relatório, mas o arquivo local não pôde ser limpo.',
+          );
+        }
+      }
+    } finally {
+      _removingAttachment = false;
+      _removalDone = null;
+      if (mounted) setState(() {});
+      done.complete();
     }
   }
 
@@ -490,7 +526,12 @@ class _ReportFormPageState extends State<ReportFormPage>
   }
 
   void _moveAttachment(int from, int to) {
-    if (to < 0 || to >= _attachments.length || from == to) return;
+    if (_removingAttachment ||
+        to < 0 ||
+        to >= _attachments.length ||
+        from == to) {
+      return;
+    }
 
     setState(() {
       final item = _attachments.removeAt(from);
@@ -556,6 +597,12 @@ class _ReportFormPageState extends State<ReportFormPage>
           Icon(icon, size: 18),
           const SizedBox(width: 8),
           Expanded(child: Text(text)),
+          if (_saveError != null)
+            TextButton(
+              key: const ValueKey('retry-draft-save'),
+              onPressed: () => unawaited(_persistDraft()),
+              child: const Text('Tentar salvar'),
+            ),
         ],
       ),
     );
@@ -654,7 +701,7 @@ class _ReportFormPageState extends State<ReportFormPage>
             Align(
               alignment: Alignment.centerLeft,
               child: OutlinedButton.icon(
-                onPressed: _attach,
+                onPressed: _removingAttachment ? null : _attach,
                 icon: const Icon(Icons.attach_file),
                 label: const Text('Adicionar imagem'),
               ),
@@ -680,7 +727,7 @@ class _ReportFormPageState extends State<ReportFormPage>
                               ),
                               IconButton(
                                 tooltip: 'Mover para cima',
-                                onPressed: entry.key == 0
+                                onPressed: _removingAttachment || entry.key == 0
                                     ? null
                                     : () => _moveAttachment(
                                           entry.key,
@@ -691,7 +738,8 @@ class _ReportFormPageState extends State<ReportFormPage>
                               IconButton(
                                 tooltip: 'Mover para baixo',
                                 onPressed:
-                                    entry.key == _attachments.length - 1
+                                    _removingAttachment ||
+                                            entry.key == _attachments.length - 1
                                         ? null
                                         : () => _moveAttachment(
                                               entry.key,
@@ -701,9 +749,11 @@ class _ReportFormPageState extends State<ReportFormPage>
                               ),
                               IconButton(
                                 tooltip: 'Remover anexo',
-                                onPressed: () => unawaited(
-                                  _removeAttachment(entry.key),
-                                ),
+                                onPressed: _removingAttachment
+                                    ? null
+                                    : () => unawaited(
+                                          _removeAttachment(entry.key),
+                                        ),
                                 icon: const Icon(Icons.delete_outline),
                               ),
                             ],
@@ -792,7 +842,12 @@ class _ReportFormPageState extends State<ReportFormPage>
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) unawaited(_leaveForm());
+        },
+        child: Scaffold(
         appBar: AppBar(
           title: Text(
             widget.report == null ? 'Novo relatório' : 'Editar relatório',
@@ -806,7 +861,9 @@ class _ReportFormPageState extends State<ReportFormPage>
               ),
           ],
         ),
-        body: Column(
+        body: AbsorbPointer(
+          absorbing: _leaving,
+          child: Column(
           children: [
             _saveIndicator(),
             _progressHeader(),
@@ -823,7 +880,9 @@ class _ReportFormPageState extends State<ReportFormPage>
               ),
             ),
           ],
+          ),
         ),
+      ),
       );
 }
 

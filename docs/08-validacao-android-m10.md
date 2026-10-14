@@ -115,6 +115,33 @@ Em caso de FAIL, registrar apenas:
 | M10-17 | Reabertura do PDF | Depois da reinicialização, abrir novamente o preview. | PDF volta a ser gerado com os mesmos dados e anexos. | |
 | M10-18 | Ausência de backend | Permanecer em modo avião durante toda a sessão e editar/salvar/revisar/gerar PDF. | Nenhuma função crítica do MVP depende de backend. | |
 
+## Reteste de estabilização offline (APK após PR #52)
+
+Estas verificações complementam os 18 critérios existentes e não substituem
+o checklist principal. Usar **apenas um caso fictício**, fotos sintéticas e
+a APK do commit que contém todas as correções acumuladas.
+
+- **Voltar do Android durante "Salvando..."**: editar um campo e usar o gesto
+  ou botão Voltar imediatamente. A tela deve aguardar a persistência antes
+  de fechar; se a escrita falhar, deve permanecer aberta e oferecer
+  **Tentar salvar**, sem perder o texto em edição.
+- **Toque rápido em remoção de anexos**: incluir duas imagens fictícias,
+  tentar remover uma delas duas vezes rapidamente e conferir que a outra
+  continua presente. Reabrir o rascunho e verificar legendas e ordem.
+- **Voltar enquanto remove uma fotografia**: aguardar a confirmação da
+  exclusão no armazenamento antes de encerrar a tela.
+- **Sincronização experimental**: o botão de upload não deve aparecer na
+  APK debug de campo nem em produção. O teste M10 é estritamente offline,
+  sem enviar conteúdo ao servidor de demonstração.
+- **PDF longo**: usar narrativa fictícia extensa e imagens sintéticas de
+  diferentes dimensões, verificando fontes, legendas e paginação após
+  reabrir o relatório.
+
+A sincronização do backend permanece decisão do M11. O acesso experimental
+em debug exige opt-in explícito `--dart-define=ENABLE_EXPERIMENTAL_SYNC=true`
+e deve usar somente payloads artificiais em ambiente isolado; não é
+autorização de envio de dados reais.
+
 ## Testes de interrupção recomendados
 
 Executar pelo menos dois:

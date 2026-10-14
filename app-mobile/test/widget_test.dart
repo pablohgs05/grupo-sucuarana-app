@@ -455,6 +455,195 @@ void main() {
     expect(attachmentStorage.deleted.single.id, 'att-b');
   });
 
+  testWidgets('Back do Android aguarda o salvamento em andamento',
+      (tester) async {
+    final gate = Completer<void>();
+    final repository = _ControlledReportRepository(gate: gate);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () => Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => ReportFormPage(reportRepository: repository),
+                ),
+              ),
+              child: const Text('Abrir formulário fictício'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Abrir formulário fictício'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Título do relatório'),
+      'Rascunho que deve sobreviver',
+    );
+
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(repository.calls, 1);
+    expect(find.byType(ReportFormPage), findsOneWidget);
+
+    // A second Back must not start another save or pop before it completes.
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    expect(repository.calls, 1);
+    expect(find.byType(ReportFormPage), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.byType(ReportFormPage), findsNothing);
+    expect(repository.saved, hasLength(1));
+    expect(repository.saved.single.title, 'Rascunho que deve sobreviver');
+  });
+
+  testWidgets('falha de gravação impede saída e permite tentar novamente',
+      (tester) async {
+    final repository = _ControlledReportRepository(failFirst: true);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: FilledButton(
+              onPressed: () => Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => ReportFormPage(reportRepository: repository),
+                ),
+              ),
+              child: const Text('Abrir formulário para falha'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Abrir formulário para falha'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Título do relatório'),
+      'Rascunho recuperável',
+    );
+    await tester.binding.handlePopRoute();
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.byType(ReportFormPage), findsOneWidget);
+    expect(find.text('Não foi possível salvar as alterações.'), findsOneWidget);
+    expect(find.byKey(const ValueKey('retry-draft-save')), findsOneWidget);
+    expect(repository.saved, isEmpty);
+
+    await tester.tap(find.byKey(const ValueKey('retry-draft-save')));
+    await tester.pump();
+    expect(find.text('Salvo no dispositivo'), findsOneWidget);
+    expect(repository.saved.single.title, 'Rascunho recuperável');
+
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.byType(ReportFormPage), findsNothing);
+  });
+
+  testWidgets('duplo toque não exclui anexo errado durante gravação lenta',
+      (tester) async {
+    final gate = Completer<void>();
+    final repository = _ControlledReportRepository(gate: gate);
+    final storage = _FakeAttachmentStorage();
+    final report = _fakeReport(
+      id: 'annex-race-ficticio',
+      title: 'Teste seguro de anexos',
+      updatedAt: DateTime.utc(2026, 10, 14),
+      lifecycle: ReportLifecycle.draft,
+      lastEditedSection: 'conclusionAndAttachments',
+      attachmentItems: const <ReportAttachment>[
+        ReportAttachment(
+          id: 'att-a',
+          localPath: '/managed/ficticio/a.jpg',
+          originalName: 'a.jpg',
+          caption: '',
+          managedLocalFile: true,
+        ),
+        ReportAttachment(
+          id: 'att-b',
+          localPath: '/managed/ficticio/b.jpg',
+          originalName: 'b.jpg',
+          caption: '',
+          managedLocalFile: true,
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ReportFormPage(
+          report: report,
+          reportRepository: repository,
+          attachmentStorage: storage,
+        ),
+      ),
+    );
+
+    final firstRemove = tester.widget<IconButton>(
+      find.ancestor(
+        of: find.byTooltip('Remover anexo').first,
+        matching: find.byType(IconButton),
+      ).first,
+    );
+    firstRemove.onPressed!();
+    firstRemove.onPressed!();
+    await tester.pump();
+
+    expect(repository.calls, 1);
+    expect(find.text('a.jpg'), findsNothing);
+    expect(find.text('b.jpg'), findsOneWidget);
+    expect(
+      tester
+          .widget<IconButton>(
+            find.ancestor(
+              of: find.byTooltip('Remover anexo'),
+              matching: find.byType(IconButton),
+            ).first,
+          )
+          .onPressed,
+      isNull,
+    );
+    expect(storage.deleted, isEmpty);
+
+    gate.complete();
+    await tester.pump();
+    await tester.pump();
+
+    expect(repository.saved, hasLength(1));
+    expect(repository.saved.single.attachmentItems.single.id, 'att-b');
+    expect(storage.deleted.map((item) => item.id), ['att-a']);
+    expect(find.text('b.jpg'), findsOneWidget);
+  });
+
+  testWidgets('APK de campo oculta sincronização experimental por padrão',
+      (tester) async {
+    final repository = _FakeReportRepository();
+    await tester.pumpWidget(
+      GrupoSucuaranaApp(reportRepository: repository),
+    );
+    repository.completeNext([
+      _fakeReport(
+        id: 'synced-disabled-ficticio',
+        title: 'Pronto apenas local',
+        updatedAt: DateTime.utc(2026, 10, 14),
+      ),
+    ]);
+    await tester.pump();
+    await tester.pump();
+
+    expect(find.text('Pronto apenas local'), findsOneWidget);
+    expect(find.byTooltip('Sincronizar'), findsNothing);
+  });
+
   testWidgets('revisão explícita precede readyForReview',
       (tester) async {
     final repository = _FakeReportRepository();
@@ -625,6 +814,32 @@ class _FakeAttachmentStorage implements AttachmentStorage {
   @override
   Future<void> delete(ReportAttachment attachment) async {
     deleted.add(attachment);
+  }
+}
+
+class _ControlledReportRepository implements ReportRepository {
+  _ControlledReportRepository({this.gate, this.failFirst = false});
+
+  final Completer<void>? gate;
+  final bool failFirst;
+  final List<Report> saved = <Report>[];
+  int calls = 0;
+
+  @override
+  Future<List<Report>> load() async => List<Report>.from(saved);
+
+  @override
+  Future<void> save(List<Report> reports) async {}
+
+  @override
+  Future<void> upsert(Report report) async {
+    calls++;
+    final pending = gate;
+    if (calls == 1 && pending != null) await pending.future;
+    if (calls == 1 && failFirst) {
+      throw StateError('Falha de gravação fictícia');
+    }
+    saved.add(report);
   }
 }
 
