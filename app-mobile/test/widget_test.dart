@@ -589,7 +589,10 @@ void main() {
     );
 
     final firstRemove = tester.widget<IconButton>(
-      find.byTooltip('Remover anexo').first,
+      find.ancestor(
+        of: find.byTooltip('Remover anexo').first,
+        matching: find.byType(IconButton),
+      ).first,
     );
     firstRemove.onPressed!();
     firstRemove.onPressed!();
@@ -599,7 +602,14 @@ void main() {
     expect(find.text('a.jpg'), findsNothing);
     expect(find.text('b.jpg'), findsOneWidget);
     expect(
-      tester.widget<IconButton>(find.byTooltip('Remover anexo')).onPressed,
+      tester
+          .widget<IconButton>(
+            find.ancestor(
+              of: find.byTooltip('Remover anexo'),
+              matching: find.byType(IconButton),
+            ).first,
+          )
+          .onPressed,
       isNull,
     );
     expect(storage.deleted, isEmpty);
