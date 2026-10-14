@@ -144,6 +144,9 @@ class _ReportFormPageState extends State<ReportFormPage>
   bool _saving = false;
   bool _hasSaved = false;
   String? _saveError;
+  bool _leaving = false;
+  bool _removingAttachment = false;
+  Completer<void>? _removalDone;
 
   static const _fields = <String, String>{
     'title': 'Título do relatório',
@@ -410,9 +413,21 @@ class _ReportFormPageState extends State<ReportFormPage>
   }
 
   Future<void> _leaveForm() async {
-    final saved = await _persistDraft();
-    if (saved && mounted) {
-      Navigator.of(context).pop();
+    if (!mounted || _leaving) return;
+
+    // Android Back uses the same durable-save gate as the visible Sair button.
+    // A second back request cannot pop the route during the first save.
+    setState(() => _leaving = true);
+    try {
+      final removal = _removalDone;
+      if (removal != null) await removal.future;
+
+      final saved = await _persistDraft();
+      if (saved && mounted) {
+        Navigator.of(context).pop();
+      }
+    } finally {
+      if (mounted) setState(() => _leaving = false);
     }
   }
 
@@ -556,6 +571,12 @@ class _ReportFormPageState extends State<ReportFormPage>
           Icon(icon, size: 18),
           const SizedBox(width: 8),
           Expanded(child: Text(text)),
+          if (_saveError != null)
+            TextButton(
+              key: const ValueKey('retry-draft-save'),
+              onPressed: () => unawaited(_persistDraft()),
+              child: const Text('Tentar salvar'),
+            ),
         ],
       ),
     );
@@ -792,7 +813,12 @@ class _ReportFormPageState extends State<ReportFormPage>
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) unawaited(_leaveForm());
+        },
+        child: Scaffold(
         appBar: AppBar(
           title: Text(
             widget.report == null ? 'Novo relatório' : 'Editar relatório',
@@ -806,7 +832,9 @@ class _ReportFormPageState extends State<ReportFormPage>
               ),
           ],
         ),
-        body: Column(
+        body: AbsorbPointer(
+          absorbing: _leaving,
+          child: Column(
           children: [
             _saveIndicator(),
             _progressHeader(),
@@ -823,7 +851,9 @@ class _ReportFormPageState extends State<ReportFormPage>
               ),
             ),
           ],
+          ),
         ),
+      ),
       );
 }
 
