@@ -22,3 +22,9 @@ Leia o [README](README.md), o [escopo](docs/01-visao-e-escopo.md) e a [arquitetu
 ## Revisão e pronto
 
 Uma mudança só está pronta quando compila, tem teste proporcional, preserva o modo offline quando aplicável e foi revisada quanto a privacidade e segurança. O merge exige CI verde e aprovação de pelo menos uma pessoa responsável pelo projeto.
+
+## Branches concluídas
+
+Crie uma branch por tarefa a partir da `dev` atualizada. Após o merge, a branch de
+origem é descartável; o histórico permanece na PR. Consulte a política e os
+critérios da [manutenção automática](docs/12-manutencao-branches.md).

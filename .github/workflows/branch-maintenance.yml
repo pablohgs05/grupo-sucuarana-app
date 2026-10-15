@@ -1,0 +1,32 @@
+name: Branch maintenance
+
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: branch-maintenance
+  cancel-in-progress: false
+
+jobs:
+  clean:
+    name: Clean unchanged merged branches
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      # Executes only code already merged into protected dev, never PR code.
+      - uses: actions/checkout@v7
+      - name: Test deletion safety rules
+        run: node --test scripts/tests/*.test.mjs
+      - name: Clean merged branches with SHA leases
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/branch-hygiene.mjs --apply
