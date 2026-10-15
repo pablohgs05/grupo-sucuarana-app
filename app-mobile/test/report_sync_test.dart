@@ -1,8 +1,78 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:grupo_sucuarana_app/report_model.dart';
 import 'package:grupo_sucuarana_app/report_sync.dart';
 
 void main() {
+  test('envia JSON completo, data UTC e nao altera o estado local', () async {
+    final report = _fakeReport(
+      lifecycle: ReportLifecycle.readyForReview,
+      syncStatus: SyncStatus.pending,
+    );
+    final original = report.toJson();
+    final client = Dio();
+    addTearDown(() => client.close(force: true));
+    RequestOptions? sent;
+    client.interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          sent = options;
+          handler.resolve(Response(requestOptions: options, statusCode: 200));
+        },
+      ),
+    );
+    await ReportSync(client: client).send(report);
+    expect(sent!.method, 'POST');
+    expect(Uri.parse(sent!.path).path, '/api/reports/sync');
+    expect(sent!.contentType, Headers.jsonContentType);
+    expect(sent!.data, {
+      'id': report.id,
+      'title': report.title,
+      'location': report.location,
+      'description': report.conclusion,
+      'occurredAt': report.identification.date.toUtc().toIso8601String(),
+      'data': original,
+    });
+    expect(report.toJson(), original);
+  });
+
+  for (final failure in [
+    DioExceptionType.connectionTimeout,
+    DioExceptionType.connectionError,
+    DioExceptionType.badResponse,
+  ]) {
+    test('propaga $failure sem marcar relatorio como sincronizado', () async {
+      final report = _fakeReport(
+        lifecycle: ReportLifecycle.readyForReview,
+        syncStatus: SyncStatus.pending,
+      );
+      final original = report.toJson();
+      final client = Dio();
+      addTearDown(() => client.close(force: true));
+      client.interceptors.add(
+        InterceptorsWrapper(
+          onRequest: (options, handler) {
+            handler.reject(
+              DioException(
+                requestOptions: options,
+                type: failure,
+                response: failure == DioExceptionType.badResponse
+                    ? Response(requestOptions: options, statusCode: 500)
+                    : null,
+              ),
+            );
+          },
+        ),
+      );
+      await expectLater(
+        ReportSync(client: client).send(report),
+        throwsA(isA<DioException>().having((e) => e.type, 'type', failure)),
+      );
+      expect(report.toJson(), original);
+      expect(isReportSyncEligible(report), isTrue);
+    });
+  }
+
   test('rascunho pendente nunca entra na fila de sincronizacao', () {
     final draft = _fakeReport(
       lifecycle: ReportLifecycle.draft,
@@ -45,10 +115,9 @@ void main() {
       syncStatus: SyncStatus.pending,
     );
 
-    expect(
-      reportsEligibleForSync([draft, ready, alreadySynced, finalized]),
-      [ready],
-    );
+    expect(reportsEligibleForSync([draft, ready, alreadySynced, finalized]), [
+      ready,
+    ]);
   });
 }
 

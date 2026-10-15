@@ -26,6 +26,7 @@ jobs:
       github.event.pull_request.draft == false &&
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       # Needed by GitHub CLI to enable auto-merge.
       contents: write
@@ -35,5 +36,7 @@ jobs:
       - name: Enable squash auto-merge when requirements are met
         env:
           GH_TOKEN: ${{ github.token }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
-        run: gh pr merge "$PR_URL" --auto --squash
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          GH_REPO: ${{ github.repository }}
+        run: gh pr merge "$PR_NUMBER" --auto --squash --match-head-commit "$PR_HEAD_SHA"
