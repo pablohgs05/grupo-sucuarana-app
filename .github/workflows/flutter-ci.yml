@@ -32,6 +32,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      - name: Test branch maintenance safety
+        run: node --test ../scripts/tests/*.test.mjs
+
       - name: Set up Java for Android
         uses: actions/setup-java@v6
         with:
