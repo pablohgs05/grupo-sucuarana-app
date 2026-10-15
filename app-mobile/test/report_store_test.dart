@@ -19,8 +19,9 @@ void main() {
 
   setUp(() async {
     SharedPreferences.setMockInitialValues({});
-    tempDirectory =
-        await Directory.systemTemp.createTemp('grupo_sucuarana_store_test_');
+    tempDirectory = await Directory.systemTemp.createTemp(
+      'grupo_sucuarana_store_test_',
+    );
     databasePath = p.join(tempDirectory.path, 'reports.db');
   });
 
@@ -103,8 +104,7 @@ void main() {
     );
   });
 
-  test('persists structured operational content after reopening',
-      () async {
+  test('persists structured operational content after reopening', () async {
     final report = _fakeReport(
       operationalContent: const OperationalReportContent(
         generalInformation: OperationalGeneralInformation(
@@ -157,8 +157,7 @@ void main() {
     expect(loaded.single.operationalContent.teams.single.members, hasLength(1));
   });
 
-  test('persists structured attachment metadata after reopening',
-      () async {
+  test('persists structured attachment metadata after reopening', () async {
     final report = _fakeReport().copyWith(
       attachmentItems: const <ReportAttachment>[
         ReportAttachment(
@@ -225,6 +224,66 @@ void main() {
       'Segundo',
     );
   });
+
+  test('save rolls back all changes when deletion fails', () async {
+    final store = ReportStore(
+      factory: databaseFactoryFfi,
+      databasePath: databasePath,
+    );
+    addTearDown(store.close);
+    final original = _fakeReport(id: 'original');
+    final retained = _fakeReport(id: 'retained');
+    await store.save([original, retained]);
+    final db = await databaseFactoryFfi.openDatabase(databasePath);
+    await db.execute("""
+      CREATE TRIGGER reject_delete BEFORE DELETE ON reports
+      WHEN OLD.id = 'retained'
+      BEGIN SELECT RAISE(ABORT, 'simulated storage failure'); END
+    """);
+    await expectLater(
+      store.save([
+        original.copyWith(syncStatus: SyncStatus.synced),
+        _fakeReport(id: 'new-report'),
+      ]),
+      throwsA(isA<DatabaseException>()),
+    );
+    final restored = await store.load();
+    expect(
+      restored.map((r) => r.id),
+      unorderedEquals(['original', 'retained']),
+    );
+    expect(
+      restored.singleWhere((r) => r.id == 'original').syncStatus,
+      SyncStatus.pending,
+    );
+  });
+
+  test(
+    'corrupt legacy data never partially migrates or deletes source',
+    () async {
+      final valid = jsonEncode(_fakeReport(id: 'legacy-valid').toJson());
+      SharedPreferences.setMockInitialValues({
+        'structured_reports': [valid, '{invalid json'],
+      });
+      final store = ReportStore(
+        factory: databaseFactoryFfi,
+        databasePath: databasePath,
+      );
+      await expectLater(store.load(), throwsA(isA<FormatException>()));
+      final preferences = await SharedPreferences.getInstance();
+      expect(preferences.getStringList('structured_reports'), [
+        valid,
+        '{invalid json',
+      ]);
+      expect(
+        preferences.getBool('structured_reports_sqlite_migrated_v1'),
+        isNot(true),
+      );
+      final db = await databaseFactoryFfi.openDatabase(databasePath);
+      expect(await db.query('reports'), isEmpty);
+      await db.close();
+    },
+  );
 
   test('migrates legacy SharedPreferences data without deleting it', () async {
     final report = _fakeReport();

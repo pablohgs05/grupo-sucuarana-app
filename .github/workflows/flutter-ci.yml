@@ -22,6 +22,7 @@ jobs:
   mobile:
     name: Analyze and test mobile app
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     defaults:
       run:
@@ -30,6 +31,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
+
+      - name: Set up Java for Android
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -55,7 +62,11 @@ jobs:
             /^LF:/ { total += $2 }
             /^LH:/ { hit += $2 }
             END {
-              if (total == 0 || hit / total < 0.50) {
+              if (total == 0) {
+                print "No coverage data found"
+                exit 1
+              }
+              if (hit / total < 0.50) {
                 printf "Line coverage %.1f%% is below the 50%% minimum\n", (hit / total) * 100
                 exit 1
               }
@@ -83,6 +94,10 @@ jobs:
           path: app-mobile/build/pdf-validation/
           if-no-files-found: warn
 
+      # Keep compilation inside the existing required mobile check.
+      - name: Build Android debug APK
+        run: flutter build apk --debug
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
         with:
@@ -93,6 +108,7 @@ jobs:
   backend:
     name: Test backend
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     defaults:
       run:
@@ -110,4 +126,14 @@ jobs:
           cache: maven
 
       - name: Run tests
-        run: mvn --batch-mode test
+        run: mvn --batch-mode verify
+
+      - name: Upload backend test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-test-reports
+          path: |
+            backend/target/surefire-reports/
+            backend/target/site/jacoco/
+          if-no-files-found: error
