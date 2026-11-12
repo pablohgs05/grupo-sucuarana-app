@@ -28,7 +28,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   sqflite_common_ffi: 2.4.5
-  sqlite3: 3.8.0
+  sqlite3: 3.9.1
 
 flutter:
   uses-material-design: true
